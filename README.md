@@ -1,4 +1,4 @@
-# Phylogenetic Analysis Pipeline GUI v0.1
+# Phylogenetic Analysis Pipeline GUI
 
 This project provides a simple GUI-based pipeline for phylogenetic analysis using TkEasyGUI. The pipeline supports the following steps:
 
