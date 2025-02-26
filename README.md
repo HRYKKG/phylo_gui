@@ -1,4 +1,4 @@
-# Phylogenetic Analysis Pipeline GUI v0.1
+# Phylogenetic Analysis Pipeline GUI
 
 This project provides a simple GUI-based pipeline for phylogenetic analysis using TkEasyGUI. The pipeline supports the following steps:
 
@@ -9,7 +9,7 @@ This project provides a simple GUI-based pipeline for phylogenetic analysis usin
 
 ## Environment Setup Using Conda
 
-We recommend using conda to set up the project environment. The following instructions assume that you have conda installed and that you will create an environment named `phylo_gui`.
+We recommend using conda/mamba to set up the project environment. The following instructions assume that you have conda installed and that you will create an environment named `phylo_gui`.
 
 ### 1. Create an environment
 
@@ -30,11 +30,11 @@ mamba install -c conda-forge ete3
 MAFFT, TrimAl, and IQTREE are available from the Bioconda channel. Install them as follows:
 
 ```bash
-conda install -c bioconda mafft trimal iqtree
+mamba install -c bioconda mafft trimal iqtree
 ```
-Note: Make sure you have configured conda to use the bioconda channel. If not, follow the Bioconda installation instructions.
+Note: Make sure you have configured conda/mamba to use the bioconda channel. If not, follow the Bioconda installation instructions.
 
-### 4. Downlaod the project
+### 4. Download the project
 Clone the repository (this will download all files and the dat folder):
 ```bash
 git clone https://github.com/HRYKKG/phylo_gui.git
@@ -47,7 +47,7 @@ chmod +x phylo_gui.py
 
 
 ## Usage
-Run the main script under ther proper environment:
+Run the main script under the proper environment:
 ```bash
 python phylo_gui.py 
 ```
@@ -59,7 +59,12 @@ python phylo_gui.py
 - Construct phylogenetic trees using IQTREE.
 - View and post-process the results (e.g., view tree, add gene names, download results).
 
-Each step is handled through separate option and result windows for a clear, step-by-step workflow.
+Each step is handled through separate options and result windows for a clear, step-by-step workflow.
 
 
+## Citation
+Please cite the programs that you executed via this pipeline:
+  - MAFFT: https://mafft.cbrc.jp/alignment/software/
+  - Trimal: https://vicfero.github.io/trimal/
+  - IQTREE: http://www.iqtree.org/
 
