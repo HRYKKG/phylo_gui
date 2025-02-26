@@ -32,7 +32,6 @@ MAFFT, TrimAl, and IQTREE are available from the Bioconda channel. Install them 
 ```bash
 mamba install -c bioconda mafft trimal iqtree
 ```
-Note: Make sure you have configured conda/mamba to use the bioconda channel. If not, follow the Bioconda installation instructions.
 
 ### 4. Download the project
 Clone the repository (this will download all files and the dat folder):
