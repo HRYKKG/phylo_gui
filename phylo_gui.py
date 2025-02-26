@@ -7,7 +7,11 @@ import re
 import webbrowser
 import shutil
 import time
+from pathlib import Path
 import tkinter as tk  # for clipboard operations
+
+# Version of the Phylo_GUI
+version = "v0.1"
 
 # Helper function to set clipboard text using tkinter
 def clipboard_set_text(text):
@@ -229,7 +233,8 @@ def handle_view_tree(win):
         eg.popup("Failed to display tree:\n" + str(e))
 
 def handle_add_atha_gene_names(win):
-    gene_file = "./dat/Athaliana_447_Araport11.geneName.txt"
+    parent = Path(__file__).resolve().parent
+    gene_file = parent.joinpath("dat/Athaliana_447_Araport11.geneName.txt")
     mapping = {}
     try:
         with open(gene_file, "r") as f:
@@ -245,7 +250,8 @@ def handle_add_atha_gene_names(win):
         return
     new_text = win.tree_content
     for agi, gene_name in mapping.items():
-        pattern = r'\b' + re.escape(agi) + r'\b(?!<)'
+        # ここで左側の単語境界を削除して、AGIコードが部分文字列としてもマッチするように変更
+        pattern = re.escape(agi) + r'(?!<)'
         replacement = r'\g<0><' + gene_name + '>'
         new_text = re.sub(pattern, replacement, new_text)
     win.tree_content = new_text
@@ -290,9 +296,31 @@ def open_alignment_options_window(portal_text):
                     else "ginsi" if values.get("mode_ginsi") 
                     else "einsi")
             alignment_input = values["alignment_input"]
+
+            # プログレスウィンドウの表示
+            prog_layout = [
+                [eg.Multiline(key="progress", default_text="MAFFT alignment is running...\n", size=(80,10))],
+                [eg.Button("OK", key="ok", disabled=True)]
+            ]
+            prog_win = eg.Window("Progress", prog_layout)
+            prog_win.refresh()
+
+            # MAFFT実行 (ブロッキング)
             success, output = run_mafft(alignment_input, threads, mode)
+            
             if not success:
-                eg.popup("Error: mafft execution failed.\n" + output)
+                prog_win["progress"].update("Error: MAFFT execution failed.\n" + output + "\nPress OK to close.")
+            else:
+                prog_win["progress"].update("MAFFT alignment completed.\nPress OK to continue.")
+            prog_win["ok"].update(disabled=False)
+            while True:
+                event_prog, _ = prog_win.read()
+                if event_prog and event_prog.lower() == "ok":
+                    break
+            prog_win.close()
+
+            if not success:
+                eg.popup("Error: MAFFT execution failed.\n" + output)
             else:
                 win.close()
                 open_alignment_result_window(output)
@@ -521,6 +549,7 @@ def open_iqtree_result_window(values, treefile):
 # ----- Portal Window -----
 def open_portal_window():
     portal_layout = [
+        [eg.Text("Phylo_GUI Portal: " + version)],
         [eg.Multiline(key="portal_input", size=(80,20))],
         [eg.Button("Load File"),
          eg.Button("Go to Alignment"),
@@ -528,7 +557,7 @@ def open_portal_window():
          eg.Button("Go to IQTREE"),
          eg.Button("Quit")]
     ]
-    win = eg.Window("Portal", portal_layout)
+    win = eg.Window("Phylo_GUI Portal", portal_layout)
     while True:
         event, values = win.read()
         if event in ("Quit", eg.WINDOW_CLOSED):
