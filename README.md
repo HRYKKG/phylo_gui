@@ -1,4 +1,4 @@
-# Phylogenetic Analysis Pipeline GUI
+# Phylogenetic Analysis Pipeline GUI v0.1
 
 This project provides a simple GUI-based pipeline for phylogenetic analysis using TkEasyGUI. The pipeline supports the following steps:
 
@@ -11,19 +11,18 @@ This project provides a simple GUI-based pipeline for phylogenetic analysis usin
 
 We recommend using conda to set up the project environment. The following instructions assume that you have conda installed and that you will create an environment named `phylo_gui`.
 
-### 1. Create and Activate the `phylo_gui` Environment
-
-Open a terminal and run:
+### 1. Create an environment
 
 ```bash
-conda create -n phylo_gui 
-conda activate phylo_gui
+mamba create -n phylo_gui 
+mamba activate phylo_gui
 ```
 ### 2. Install Python Dependencies
 
-Install the required Python packages via pip (or conda if available):
+Install the required Python packages via pip (for TKEasyGUI) and conda/mamba:
 ```bash
-pip install tkeasygui ete3
+pip install TKEasyGui
+mamba install -c conda-forge ete3
 ```
 
 ### 3. Install External Tools via Conda
