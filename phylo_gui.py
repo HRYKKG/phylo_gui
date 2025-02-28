@@ -121,6 +121,7 @@ def get_model_line(iqtree_file):
 def build_iqtree_cmd(iqtree_input, threads, ufboot, sh_alr, lbp, abayes, subst_model, prefix):
     """
     Builds the IQ-TREE command based on provided parameters.
+    If subst_model is "auto" (case-insensitive), the option "-m MFP" is used.
     """
     cmd = ["iqtree", "-s", iqtree_input, "--prefix", prefix]
     try:
@@ -148,8 +149,11 @@ def build_iqtree_cmd(iqtree_input, threads, ufboot, sh_alr, lbp, abayes, subst_m
         cmd.extend(["-lbp", str(lbp_val)])
     if abayes:
         cmd.append("-abayes")
-    # 置換モデルチェックはせず、入力された値をそのまま使用
-    cmd.extend(["-m", subst_model])
+    # If the substitution model is "auto" (case-insensitive), use "-m MFP"
+    if subst_model.lower() == "auto":
+        cmd.extend(["-m", "MFP"])
+    else:
+        cmd.extend(["-m", subst_model])
     return cmd
 
 def run_iqtree(iqtree_input, threads, ufboot, sh_alr, lbp, abayes, subst_model, output_prefix):
