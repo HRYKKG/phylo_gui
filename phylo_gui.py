@@ -614,7 +614,8 @@ def open_portal_window():
     """Opens the main portal window for Phylo_GUI."""
     portal_layout = [
         [eg.Text("Phylo_GUI Portal: " + version)],
-        [eg.Multiline(key="portal_input", size=(80,20))],
+        [eg.Multiline(key="portal_input", size=(80,20), 
+                      expand_x=True, expand_y=True)],
         [eg.Button("Load File"),
          eg.Button("Go to Alignment"),
          eg.Button("Go to Trim"),
