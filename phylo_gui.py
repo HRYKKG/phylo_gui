@@ -65,26 +65,23 @@ def load_file(window_obj, key):
 def run_mafft(fasta_text, threads=4, mode="auto"):
     """Executes MAFFT with the given parameters and returns (success, output)."""
     try:
-        # 基本コマンドの構築
         cmd = ["mafft", "--thread", str(threads)]
         
-        # モードに応じた正式なオプションを追加
+        # Modification of command
         if mode == "auto":
             cmd.append("--auto")
         elif mode == "linsi":
-            # linsi は localpair + maxiterate 1000 と等価
+            # linsi -> localpair + maxiterate 1000 
             cmd.extend(["--localpair", "--maxiterate", "1000"])
         elif mode == "ginsi":
-            # ginsi は globalpair + maxiterate 1000 と等価
+            # ginsi -> globalpair + maxiterate 1000
             cmd.extend(["--globalpair", "--maxiterate", "1000"])
         elif mode == "einsi":
-            # einsi は genafpair + maxiterate 1000 と等価
+            # einsi -> genafpair + maxiterate 1000
             cmd.extend(["--genafpair", "--maxiterate", "1000"])
         
-        # 入力を標準入力から受け取る指定
         cmd.append("-")
 
-        # 実行
         result = subprocess.run(cmd, input=fasta_text, text=True, capture_output=True, check=True)
         return True, result.stdout
     except subprocess.CalledProcessError as e:
