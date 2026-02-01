@@ -17,23 +17,7 @@ We recommend using conda/mamba to set up the project environment. The following 
 mamba create -n phylo_gui 
 mamba activate phylo_gui
 ```
-### 2. Install Python Dependencies
-
-Install the required Python packages via pip (for TKEasyGUI) and conda/mamba:
-```bash
-pip install TKEasyGui
-mamba install -c conda-forge ete3
-```
-
-### 3. Install External Tools via Conda
-
-MAFFT, TrimAl, and IQTREE are available from the Bioconda channel. Install them as follows:
-
-```bash
-mamba install -c bioconda mafft trimal iqtree
-```
-
-### 4. Download the project
+### 2. Download the project
 Clone the repository (this will download all files and the dat folder):
 ```bash
 git clone https://github.com/HRYKKG/phylo_gui.git
@@ -42,6 +26,21 @@ cd phylo_gui
 If needed, make the main script executable:
 ```bash
 chmod +x phylo_gui.py
+```
+
+### 3. Install Python Dependencies
+
+Install the required Python packages via pip using the provided requirements file:
+```bash
+pip install -r requirement.txt
+```
+
+### 4. Install External Tools via Conda
+
+MAFFT, TrimAl, and IQTREE are available from the Bioconda channel. Install them as follows:
+
+```bash
+mamba install -c bioconda mafft trimal iqtree
 ```
 
 
@@ -66,4 +65,3 @@ Please cite the programs that you executed via this pipeline:
   - MAFFT: https://mafft.cbrc.jp/alignment/software/
   - Trimal: https://vicfero.github.io/trimal/
   - IQTREE: http://www.iqtree.org/
-
