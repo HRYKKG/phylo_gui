@@ -2,11 +2,12 @@ import tkinter.filedialog as fd
 
 import TkEasyGUI as eg
 
+from fasta_utils import parse_fasta_records
 from ui_common import run_with_progress
 from services_alignment import run_mafft
 
 
-def open_alignment_options_window(portal_text):
+def open_alignment_options_window(context):
     """
     Opens the alignment options window.
     When "Run Alignment" is executed, runs MAFFT via a progress window.
@@ -15,7 +16,7 @@ def open_alignment_options_window(portal_text):
     window is opened.
     """
     layout = [
-        [eg.Multiline(key="alignment_input", default_text=portal_text, size=(80, 20), expand_x=True, expand_y=True)],
+        [eg.Multiline(key="alignment_input", default_text=context.get_alignment_input_text(), size=(80, 20), expand_x=True, expand_y=True)],
         [eg.Text("Threads:"), eg.Input(default_text="4", key="threads", size=(5, 1))],
         [
             eg.Text("Mode:"),
@@ -45,39 +46,47 @@ def open_alignment_options_window(portal_text):
                 else ("linsi" if values.get("mode_linsi") else ("ginsi" if values.get("mode_ginsi") else "einsi"))
             )
             alignment_input = values["alignment_input"].strip()
+            try:
+                context.set_original_input(alignment_input, parse_fasta_records(alignment_input))
+            except ValueError as exc:
+                eg.popup("FASTA input error:\n" + str(exc))
+                continue
             result = run_with_progress("MAFFT alignment is running...", run_mafft, alignment_input, threads, mode)
             if not result[0]:
                 eg.popup("Error: MAFFT execution failed.\n" + result[1])
             else:
-                action = open_alignment_result_window(result[1])
+                context.set_alignment_output(result[1])
+                action = open_alignment_result_window(context)
                 if action in ("Go to Trim", "Go to IQTREE"):
                     opt_win.close()
                     if action == "Go to Trim":
                         from ui_trim import open_trim_options_window
 
-                        open_trim_options_window(result[1])
+                        open_trim_options_window(context)
                     else:
                         from ui_iqtree import open_iqtree_options_window
 
-                        open_iqtree_options_window(result[1])
+                        open_iqtree_options_window(context)
                     return
     opt_win.close()
 
 
-def open_alignment_result_window(result_text):
+def open_alignment_result_window(context):
     """
     Displays the alignment result window.
     If the user selects "Go to Trim" or "Go to IQTREE", returns that event.
     Otherwise, closes normally.
     """
     layout = [
-        [eg.Multiline(key="alignment_output", default_text=result_text, size=(80, 20), expand_x=True, expand_y=True)],
+        [eg.Multiline(key="alignment_output", default_text=context.alignment_output_text or "", size=(80, 20), expand_x=True, expand_y=True)],
         [eg.Button("Copy"), eg.Button("Download"), eg.Button("Go to Trim"), eg.Button("Go to IQTREE"), eg.Button("Close")],
     ]
     res_win = eg.Window("Alignment Result", layout, modal=True, finalize=True, resizable=True)
     ret = None
     while True:
         event, values = res_win.read()
+        if values and "alignment_output" in values:
+            context.alignment_output_text = values["alignment_output"]
         if event in ("Close", eg.WINDOW_CLOSED):
             break
         elif event == "Copy":

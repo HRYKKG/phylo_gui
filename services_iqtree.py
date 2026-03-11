@@ -89,11 +89,12 @@ def build_iqtree_cmd(iqtree_input, threads, ufboot, sh_alr, lbp, abayes, subst_m
 def run_iqtree(iqtree_input, threads, ufboot, sh_alr, lbp, abayes, subst_model, output_prefix):
     """
     Executes IQ-TREE with the specified parameters.
-    Returns a tuple: (success, message, treefile, input_file, command_string).
+    Returns a tuple:
+    (success, message, treefile, input_file, command_string, output_dir, iqtree_report_path).
     """
     iqtree_bin = _iqtree_bin()
     if iqtree_bin is None:
-        return False, "iqtree not found", None, None, ""
+        return False, "iqtree not found", None, None, "", None, None
     output_dir = tempfile.mkdtemp(prefix="tmp_iqtree_")
     os.makedirs(output_dir, exist_ok=True)
     with tempfile.NamedTemporaryFile(mode="w", delete=False, dir=output_dir, prefix="tmp_input", suffix=".fasta") as temp_in:
@@ -105,6 +106,7 @@ def run_iqtree(iqtree_input, threads, ufboot, sh_alr, lbp, abayes, subst_model, 
         subprocess.run(cmd, text=True, capture_output=True, check=True, cwd=output_dir)
     except (subprocess.CalledProcessError, OSError) as e:
         err = e.stderr if isinstance(e, subprocess.CalledProcessError) and e.stderr else str(e)
-        return False, err, None, input_file, cmd_str
+        return False, err, None, input_file, cmd_str, output_dir, None
     treefile = os.path.join(output_dir, output_prefix + ".treefile")
-    return True, "IQTREE execution complete", treefile, input_file, cmd_str
+    iqtree_report_path = os.path.join(output_dir, output_prefix + ".iqtree")
+    return True, "IQTREE execution complete", treefile, input_file, cmd_str, output_dir, iqtree_report_path

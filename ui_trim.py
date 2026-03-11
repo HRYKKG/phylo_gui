@@ -7,7 +7,7 @@ import TkEasyGUI as eg
 from services_trim import get_trimal_version, run_trimal
 
 
-def open_trim_options_window(portal_text):
+def open_trim_options_window(context):
     """
     Opens the trim options window.
     When "Run Trim" is executed, runs trimal.
@@ -16,7 +16,7 @@ def open_trim_options_window(portal_text):
     """
     trimal_version = get_trimal_version()
     layout = [
-        [eg.Multiline(key="trim_input", default_text=portal_text, size=(80, 20), expand_x=True, expand_y=True)],
+        [eg.Multiline(key="trim_input", default_text=context.get_trim_input_text(), size=(80, 20), expand_x=True, expand_y=True)],
         [eg.Text("trimal: " + trimal_version)],
         [
             eg.Text("Mode:"),
@@ -50,30 +50,33 @@ def open_trim_options_window(portal_text):
             if not success:
                 eg.popup("Error: trimal execution failed.\n" + message)
                 continue
-            action = open_trim_result_window(trimmed_result, output_path, html_path)
+            context.set_trim_output(trimmed_result)
+            action = open_trim_result_window(context, output_path, html_path)
             if action == "Go to IQTREE":
                 opt_win.close()
                 from ui_iqtree import open_iqtree_options_window
 
-                open_iqtree_options_window(trimmed_result)
+                open_iqtree_options_window(context)
                 return
     opt_win.close()
 
 
-def open_trim_result_window(trimmed_result, output_path, html_path):
+def open_trim_result_window(context, output_path, html_path):
     """
     Displays the trim result window.
     If the user selects "Go to IQTREE", returns that event.
     Otherwise, closes normally.
     """
     layout = [
-        [eg.Multiline(key="trimmed_output", default_text=trimmed_result, size=(80, 20), expand_x=True, expand_y=True)],
+        [eg.Multiline(key="trimmed_output", default_text=context.trim_output_text or "", size=(80, 20), expand_x=True, expand_y=True)],
         [eg.Button("Copy"), eg.Button("Show result"), eg.Button("Download"), eg.Button("Go to IQTREE"), eg.Button("Close")],
     ]
     res_win = eg.Window("Trim Result", layout, modal=True, finalize=True, resizable=True)
     ret = None
     while True:
         event, vals = res_win.read()
+        if vals and "trimmed_output" in vals:
+            context.trim_output_text = vals["trimmed_output"]
         if event in ("Close", eg.WINDOW_CLOSED):
             break
         elif event == "Copy":

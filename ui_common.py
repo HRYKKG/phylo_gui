@@ -40,5 +40,7 @@ def load_file(window_obj, key):
             with open(file_path, "r") as f:
                 content = f.read()
             window_obj[key].update(content)
+            return content
         except Exception as e:
             eg.popup("An error occurred while reading the file:\n" + str(e))
+    return None

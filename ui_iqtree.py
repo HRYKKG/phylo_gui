@@ -1,5 +1,3 @@
-import os
-
 import TkEasyGUI as eg
 
 from ui_common import run_with_progress
@@ -8,14 +6,22 @@ from services_treeviz import handle_view_tree
 from services_downloads import handle_download_newick, handle_download_all_files, handle_add_atha_gene_names
 
 
-def open_iqtree_options_window(portal_text):
+def _sync_tree_output(win_res):
+    tree_text = win_res["tree_output"].get()
+    win_res.tree_content = tree_text
+    if hasattr(win_res, "context"):
+        win_res.context.tree_newick_text = tree_text
+    return tree_text
+
+
+def open_iqtree_options_window(context):
     """
     Opens the IQ-TREE options window.
     When "Run IQTREE" is executed, runs IQ-TREE via a progress window.
     After execution, displays the IQ-TREE result window.
     """
     layout = [
-        [eg.Multiline(key="iqtree_input", default_text=portal_text, size=(80, 20), expand_x=True, expand_y=True)],
+        [eg.Multiline(key="iqtree_input", default_text=context.get_iqtree_input_text(), size=(80, 20), expand_x=True, expand_y=True)],
         [eg.Text("IQ-TREE version: " + get_iqtree_version())],
         [eg.Text("threads (0 = auto):"), eg.Input(default_text="0", key="threads", size=(10, 1))],
         [eg.Text("Confidence analyses")],
@@ -65,17 +71,26 @@ def open_iqtree_options_window(portal_text):
             if not result[0]:
                 eg.popup("Error: IQTREE execution failed.\n" + result[1])
             else:
-                open_iqtree_result_window(values, result[2])
+                treefile = result[2]
+                with open(treefile, "r") as f:
+                    tree_content = f.read()
+                context.set_iqtree_output(
+                    output_dir=result[5],
+                    prefix=output_prefix,
+                    treefile_path=treefile,
+                    report_path=result[6],
+                    newick_text=tree_content,
+                )
+                open_iqtree_result_window(context)
     win.close()
 
 
-def open_iqtree_result_window(values, treefile):
+def open_iqtree_result_window(context):
     """Displays the IQ-TREE result window and offers further actions."""
     try:
-        with open(treefile, "r") as f:
-            tree_content = f.read()
-        iqtree_txt = os.path.join(os.path.dirname(treefile), values["output_prefix"] + ".iqtree")
-        model_info = get_model_line(iqtree_txt)
+        treefile = str(context.treefile_path)
+        tree_content = context.tree_newick_text or ""
+        model_info = get_model_line(str(context.iqtree_report_path))
         result_header = f"{model_info}\n"
         layout = [
             [eg.Text(result_header)],
@@ -85,15 +100,17 @@ def open_iqtree_result_window(values, treefile):
             [eg.Button("Close")],
         ]
         win_res = eg.Window("IQTREE Result", layout, modal=True, finalize=True, resizable=True)
-        win_res.output_prefix = values["output_prefix"]
+        win_res.context = context
+        win_res.output_prefix = context.iqtree_prefix
         win_res.tree_content = tree_content
         win_res.treefile = treefile
         while True:
             event, _ = win_res.read()
+            _sync_tree_output(win_res)
             if event in ("Close", eg.WINDOW_CLOSED):
                 break
             elif event == "Copy":
-                eg.set_clipboard(win_res["tree_output"].get())
+                eg.set_clipboard(win_res.tree_content)
                 eg.popup("Result copied to clipboard.")
             elif event == "Add Atha gene names":
                 handle_add_atha_gene_names(win_res)

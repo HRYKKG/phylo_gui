@@ -8,9 +8,17 @@ import tkinter.filedialog as fd
 import TkEasyGUI as eg
 
 
+def _get_tree_text(win):
+    context = getattr(win, "context", None)
+    if context is not None and context.tree_newick_text is not None:
+        return context.tree_newick_text
+    return getattr(win, "tree_content", "")
+
+
 def handle_download_newick(win):
     """Handles saving the Newick tree to a file."""
-    default_name = win.output_prefix if hasattr(win, "output_prefix") else "output"
+    context = getattr(win, "context", None)
+    default_name = context.iqtree_prefix if context and context.iqtree_prefix else (win.output_prefix if hasattr(win, "output_prefix") else "output")
     save_path = fd.asksaveasfilename(
         defaultextension=".newick",
         initialfile=default_name,
@@ -19,7 +27,7 @@ def handle_download_newick(win):
     if save_path:
         try:
             with open(save_path, "w") as f:
-                f.write(win.tree_content)
+                f.write(_get_tree_text(win))
             eg.popup("Result saved: " + save_path)
         except Exception as e:
             eg.popup("Failed to save file:\n" + str(e))
@@ -27,12 +35,14 @@ def handle_download_newick(win):
 
 def handle_download_all_files(win):
     """Creates an archive of all IQ-TREE output files and allows the user to save it."""
-    output_dir = os.path.dirname(win.treefile)
-    edited_filename = f"{win.output_prefix}_edited.nwk" if hasattr(win, "output_prefix") else "edited.nwk"
+    context = getattr(win, "context", None)
+    output_dir = str(context.iqtree_output_dir) if context and context.iqtree_output_dir else os.path.dirname(win.treefile)
+    output_prefix = context.iqtree_prefix if context and context.iqtree_prefix else (win.output_prefix if hasattr(win, "output_prefix") else "output")
+    edited_filename = f"{output_prefix}_edited.nwk"
     edited_file_path = os.path.join(output_dir, edited_filename)
     try:
         with open(edited_file_path, "w") as f:
-            f.write(win.tree_content)
+            f.write(_get_tree_text(win))
     except Exception as e:
         eg.popup("Failed to write edited tree file:\n" + str(e))
         return
@@ -41,7 +51,7 @@ def handle_download_all_files(win):
         with tempfile.TemporaryDirectory(prefix="iqtree_archive_") as temp_dir:
             base_name = os.path.join(temp_dir, "archive")
             archive_file = shutil.make_archive(base_name=base_name, format="zip", root_dir=output_dir)
-            default_zip_name = f"iqtree_all_{win.output_prefix}" if hasattr(win, "output_prefix") else "iqtree_all_output"
+            default_zip_name = f"iqtree_all_{output_prefix}"
             save_path = fd.asksaveasfilename(
                 defaultextension=".zip",
                 initialfile=default_zip_name,
@@ -74,14 +84,18 @@ def handle_add_atha_gene_names(win):
     except Exception as e:
         eg.popup("Failed to load gene name file:\n" + str(e))
         return
-    new_text = win.tree_content
+    context = getattr(win, "context", None)
+    new_text = _get_tree_text(win)
     for agi, gene_name in mapping.items():
         pattern = re.escape(agi) + r"(?!<)"
         replacement = r"\g<0><" + gene_name + ">"
         new_text = re.sub(pattern, replacement, new_text)
     win.tree_content = new_text
+    if context is not None:
+        context.tree_newick_text = new_text
     try:
-        with open(win.treefile, "w") as f:
+        treefile_path = str(context.treefile_path) if context and context.treefile_path else win.treefile
+        with open(treefile_path, "w") as f:
             f.write(new_text)
     except Exception as e:
         eg.popup("Failed to update tree file:\n" + str(e))
