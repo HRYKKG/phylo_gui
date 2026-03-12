@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Phylo GUI Tree Viewer</title>
+    <link rel="stylesheet" href="file:///Users/hiro/Desktop/phylo_gui/vendor/phylotree/phylotree.css">
+    <link rel="stylesheet" href="file:///Users/hiro/Desktop/phylo_gui/viewer/style.css">
+  </head>
+  <body>
+    <div id="viewer-root">
+      <header class="viewer-header">
+        <div>
+          <p class="viewer-kicker">Phylo GUI</p>
+          <h1 id="viewer-title">Phylo GUI Tree Viewer</h1>
+        </div>
+        <p class="viewer-note">Minimal milestone: local Newick rendering with phylotree.js.</p>
+      </header>
+      <main class="viewer-main">
+        <section class="tree-panel">
+          <div id="tree-container" class="tree-container"></div>
+        </section>
+        <aside class="info-panel">
+          <h2>Viewer Status</h2>
+          <p id="viewer-status">Loading browser assets...</p>
+          <h2>Input</h2>
+          <p id="viewer-summary">Newick length: 32 characters</p>
+          <h2>Notes</h2>
+          <p>This build only proves local interactive rendering. Selection/export comes next.</p>
+          <h2>Debug</h2>
+          <pre id="viewer-debug" class="viewer-debug">Waiting for initialization logs...</pre>
+        </aside>
+      </main>
+    </div>
+    <script>
+      window.__TREE_VIEWER_DATA__ = {"title": "Phylo GUI Tree Viewer", "newick": "(A:0.1,B:0.2,(C:0.3,D:0.4):0.5);"};
+      window.__viewerReport = function (message, isError) {
+        var status = document.getElementById("viewer-status");
+        var debug = document.getElementById("viewer-debug");
+        if (status) {
+          status.textContent = message;
+          status.className = isError ? "is-error" : "";
+        }
+        if (debug) {
+          debug.textContent = message;
+        }
+      };
+      window.addEventListener("error", function (event) {
+        var detail = event && event.message ? event.message : "Unknown browser error";
+        window.__viewerReport("Browser error: " + detail, true);
+      });
+      window.addEventListener("unhandledrejection", function (event) {
+        var reason = event && event.reason ? String(event.reason) : "Unknown promise rejection";
+        window.__viewerReport("Unhandled promise rejection: " + reason, true);
+      });
+    </script>
+    <script src="file:///Users/hiro/Desktop/phylo_gui/vendor/underscore/underscore.min.js" onerror="window.__viewerReport('Failed to load underscore.min.js', true)"></script>
+    <script>
+      window.__underscore = window._.noConflict();
+      window.__viewerReport("Loaded underscore.", false);
+    </script>
+    <script src="file:///Users/hiro/Desktop/phylo_gui/vendor/lodash/lodash.min.js" onerror="window.__viewerReport('Failed to load lodash.min.js', true)"></script>
+    <script>
+      window._$1 = window._;
+      window._ = window.__underscore;
+      window.__viewerReport("Loaded lodash.", false);
+    </script>
+    <script src="file:///Users/hiro/Desktop/phylo_gui/vendor/phylotree/phylotree.js" onerror="window.__viewerReport('Failed to load phylotree.js', true)"></script>
+    <script src="file:///Users/hiro/Desktop/phylo_gui/viewer/app.js" onerror="window.__viewerReport('Failed to load viewer/app.js', true)"></script>
+  </body>
+</html>

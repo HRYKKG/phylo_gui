@@ -7,6 +7,12 @@ This project provides a simple GUI-based pipeline for phylogenetic analysis usin
 - **Phylogenetic Tree Construction:** Execute IQTREE to estimate the phylogenetic tree.
 - **Tree Visualization & Post-Processing:** View and post-process the resulting tree using ETE3.
 
+The repository also includes an experimental standalone browser viewer script for Newick trees:
+
+```bash
+python interactive_tree_viewer.py --newick-file path/to/treefile
+```
+
 ## Environment Setup Using Conda
 
 We recommend using conda/mamba to set up the project environment. The following instructions assume that you have conda installed and that you will create an environment named `phylo_gui`.
@@ -65,3 +71,13 @@ Please cite the programs that you executed via this pipeline:
   - MAFFT: https://mafft.cbrc.jp/alignment/software/
   - Trimal: https://vicfero.github.io/trimal/
   - IQTREE: http://www.iqtree.org/
+
+## Third-Party Browser Assets
+
+The standalone browser viewer vendors the following upstream assets in `vendor/`:
+
+- `phylotree.js` (MIT)
+- `underscore` (MIT)
+- `lodash` (MIT)
+
+Each vendored dependency includes its upstream license text in the corresponding `vendor/*/LICENSE` path.
