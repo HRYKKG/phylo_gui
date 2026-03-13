@@ -217,6 +217,7 @@
     var clearActiveNodeButton = document.getElementById("clear-active-node-button");
     var clearSelectedLeavesButton = document.getElementById("clear-selected-leaves-button");
     var copySelectedLeavesButton = document.getElementById("copy-selected-leaves-button");
+    var saveSelectionJsonButton = document.getElementById("save-selection-json-button");
     var rectangleToggleButton = document.getElementById("rectangle-select-toggle");
 
     if (toggleCollapseButton) {
@@ -234,6 +235,13 @@
     }
     if (copySelectedLeavesButton) {
       copySelectedLeavesButton.disabled = appState.selectedLeafNames.length === 0;
+    }
+    if (saveSelectionJsonButton) {
+      saveSelectionJsonButton.disabled = !(
+        window.__TREE_VIEWER_DATA__ &&
+        window.__TREE_VIEWER_DATA__.selectionApiUrl &&
+        appState.selectedLeafNames.length > 0
+      );
     }
     if (rectangleToggleButton) {
       rectangleToggleButton.textContent = appState.selectionMode === "rectangle" ? "Rectangle Select: On" : "Rectangle Select: Off";
@@ -787,6 +795,7 @@
     var clearActiveNodeButton = document.getElementById("clear-active-node-button");
     var clearSelectedLeavesButton = document.getElementById("clear-selected-leaves-button");
     var copySelectedLeavesButton = document.getElementById("copy-selected-leaves-button");
+    var saveSelectionJsonButton = document.getElementById("save-selection-json-button");
 
     if (toggleCollapseButton) {
       toggleCollapseButton.onclick = function () {
@@ -846,6 +855,41 @@
           setStatus("Selected leaf names copied to clipboard.", false);
         }).catch(function (error) {
           setStatus("Failed to copy leaf names: " + error, true);
+        });
+      };
+    }
+
+    if (saveSelectionJsonButton) {
+      saveSelectionJsonButton.onclick = function () {
+        var viewerData = window.__TREE_VIEWER_DATA__ || {};
+        var payload;
+
+        if (!viewerData.selectionApiUrl || appState.selectedLeafNames.length === 0) {
+          return;
+        }
+
+        payload = {
+          selected_leaf_names: appState.selectedLeafNames.slice().sort(),
+          selected_count: appState.selectedLeafNames.length,
+          exported_at: new Date().toISOString(),
+          title: viewerData.title || "Phylo GUI Tree Viewer",
+        };
+
+        fetch(viewerData.selectionApiUrl, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify(payload),
+        }).then(function (response) {
+          if (!response.ok) {
+            throw new Error("HTTP " + response.status);
+          }
+          return response.json();
+        }).then(function (result) {
+          setStatus("Selection sent to GUI.", false);
+        }).catch(function (error) {
+          setStatus("Failed to send selection to GUI: " + error, true);
         });
       };
     }

@@ -3,7 +3,8 @@ import TkEasyGUI as eg
 from ui_common import run_with_progress
 from services_iqtree import get_iqtree_version, run_iqtree, get_model_line
 from services_treeviz import handle_view_tree
-from services_downloads import handle_download_newick, handle_download_all_files, handle_add_atha_gene_names
+from services_downloads import handle_download_newick, handle_download_display_tree, handle_download_all_files, handle_add_atha_gene_names
+from ui_leaf_selection import load_selection_payload, open_leaf_selection_window
 
 
 def _sync_tree_output(win_res):
@@ -12,6 +13,20 @@ def _sync_tree_output(win_res):
     if hasattr(win_res, "context"):
         win_res.context.tree_newick_text = tree_text
     return tree_text
+
+
+def _maybe_handle_tree_selection(win_res):
+    selection_path = getattr(win_res, "tree_selection_path", None)
+    if not selection_path or not selection_path.exists():
+        return
+
+    mtime_ns = selection_path.stat().st_mtime_ns
+    if getattr(win_res, "tree_selection_seen_mtime_ns", None) == mtime_ns:
+        return
+
+    selection_payload = load_selection_payload(selection_path)
+    win_res.tree_selection_seen_mtime_ns = mtime_ns
+    open_leaf_selection_window(win_res.context, selection_payload)
 
 
 def open_iqtree_options_window(context):
@@ -90,13 +105,13 @@ def open_iqtree_result_window(context):
     try:
         treefile = str(context.treefile_path)
         tree_content = context.tree_newick_text or ""
-        model_info = get_model_line(str(context.iqtree_report_path))
+        model_info = get_model_line(str(context.iqtree_report_path)) if context.iqtree_report_path else "External tree loaded"
         result_header = f"{model_info}\n"
         layout = [
             [eg.Text(result_header)],
             [eg.Multiline(key="tree_output", default_text=tree_content, size=(80, 20), expand_x=True, expand_y=True)],
             [eg.Button("Copy"), eg.Button("View Tree"), eg.Button("Add Atha gene names")],
-            [eg.Button("Download Newick"), eg.Button("Download all files")],
+            [eg.Button("Download Newick"), eg.Button("Download Display Tree"), eg.Button("Download all files")],
             [eg.Button("Close")],
         ]
         win_res = eg.Window("IQTREE Result", layout, modal=True, finalize=True, resizable=True)
@@ -104,9 +119,13 @@ def open_iqtree_result_window(context):
         win_res.output_prefix = context.iqtree_prefix
         win_res.tree_content = tree_content
         win_res.treefile = treefile
+        win_res.display_tree_path = None
+        win_res.tree_selection_path = None
+        win_res.tree_selection_seen_mtime_ns = None
         while True:
-            event, _ = win_res.read()
+            event, _ = win_res.read(timeout=250)
             _sync_tree_output(win_res)
+            _maybe_handle_tree_selection(win_res)
             if event in ("Close", eg.WINDOW_CLOSED):
                 break
             elif event == "Copy":
@@ -118,6 +137,8 @@ def open_iqtree_result_window(context):
                 handle_view_tree(win_res)
             elif event == "Download Newick":
                 handle_download_newick(win_res)
+            elif event == "Download Display Tree":
+                handle_download_display_tree(win_res)
             elif event == "Download all files":
                 handle_download_all_files(win_res)
         win_res.close()
