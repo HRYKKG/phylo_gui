@@ -19,8 +19,9 @@
         }
         action = activeNode.collapsed ? "expanded" : "collapsed";
         appState.display.toggleCollapse(activeNode).update();
-        app.syncPanels();
-        app.setStatus("Subtree " + action + " for " + app.formatValue(activeNode.data && activeNode.data.name) + ".", false);
+        app.refreshBindingsAfterTreeMutation(
+          "Subtree " + action + " for " + app.formatValue(activeNode.data && activeNode.data.name) + "."
+        );
       };
     }
 

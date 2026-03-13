@@ -8,13 +8,6 @@
     return "Browse mode: click nodes to inspect them.";
   }
 
-  app.summarizeInput = function (newick) {
-    var summary = document.getElementById("viewer-summary");
-    if (summary) {
-      summary.textContent = "Newick length: " + newick.length + " characters";
-    }
-  };
-
   app.syncSelectedNodePanel = function () {
     var appState = app.state;
     var node = app.getActiveNode();
@@ -128,7 +121,6 @@
     var activeNode = app.getActiveNode();
     var activeNodeId = activeNode && activeNode._viewerNodeId ? activeNode._viewerNodeId : null;
 
-    app.assignViewerNodeIds();
     if (!container) {
       return;
     }
@@ -147,7 +139,6 @@
       path.classList.toggle("is-box-selected-branch", selectedBranches.has(nodeId));
       path.classList.toggle("is-active-node-branch", activeNodeId === nodeId);
     });
-    app.sanitizeRenderedLabels();
   };
 
   app.syncPanels = function () {

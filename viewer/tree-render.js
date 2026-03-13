@@ -1,6 +1,13 @@
 (function () {
   var app = window.PhyloApp;
 
+  app.summarizeInput = function (newick) {
+    var summary = document.getElementById("viewer-summary");
+    if (summary) {
+      summary.textContent = "Newick length: " + newick.length + " characters";
+    }
+  };
+
   app.createTree = function (newick) {
     if (!window.phylotree || !window.phylotree.phylotree) {
       throw new Error("phylotree.js did not load correctly.");

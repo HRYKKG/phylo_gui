@@ -128,8 +128,9 @@
       };
     }
 
-    if (document.getElementById("rectangle-select-toggle")) {
-      document.getElementById("rectangle-select-toggle").onclick = function () {
+    var rectangleToggleButton = document.getElementById("rectangle-select-toggle");
+    if (rectangleToggleButton) {
+      rectangleToggleButton.onclick = function () {
         var container = document.getElementById("tree-container");
         appState.selectionMode = appState.selectionMode === "rectangle" ? "browse" : "rectangle";
         if (container) {

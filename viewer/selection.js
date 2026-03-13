@@ -96,10 +96,13 @@
       return;
     }
     appState.boxSelectedNodeIds = boxSelectedNodeIds || [];
+    appState._suppressSelectionCallback = true;
     appState.display.clearSelection();
     if (names.length > 0) {
       appState.display.selectNodes(names);
     }
+    appState._suppressSelectionCallback = false;
+    appState.selectedLeafNames = names.slice();
     app.assignViewerNodeIds();
     appState.selectedBranchNodeIds = app.computeSelectedBranchNodeIds();
     app.syncPanels();

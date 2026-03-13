@@ -14,7 +14,6 @@
       zoomTransform = appState.display.currentZoomTransform;
     }
 
-    appState.currentZoom = zoomTransform ? zoomTransform.k : 1;
     if (appState.display) {
       appState.display.currentZoomTransform = zoomTransform;
     }
@@ -67,16 +66,22 @@
       }
     };
 
-    appState.display.selectionCallback(function (selectedNodes) {
-      appState.selectedLeafNames = (selectedNodes || [])
-        .filter(app.isLeaf)
-        .map(function (node) {
-          return node.data.name;
-        });
-      app.assignViewerNodeIds();
-      appState.selectedBranchNodeIds = app.computeSelectedBranchNodeIds();
-      app.syncPanels();
-    });
+    if (!appState.display._callbacksBound) {
+      appState.display.selectionCallback(function (selectedNodes) {
+        if (appState._suppressSelectionCallback) {
+          return;
+        }
+        appState.selectedLeafNames = (selectedNodes || [])
+          .filter(app.isLeaf)
+          .map(function (node) {
+            return node.data.name;
+          });
+        app.assignViewerNodeIds();
+        appState.selectedBranchNodeIds = app.computeSelectedBranchNodeIds();
+        app.syncPanels();
+      });
+      appState.display._callbacksBound = true;
+    }
 
     if (appState.display.svg && appState.display.svg.on) {
       appState.display.svg.on("mousedown.zoom", null);

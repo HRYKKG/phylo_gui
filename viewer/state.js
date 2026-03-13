@@ -9,7 +9,6 @@
       selectedLeafNames: [],
       boxSelectedNodeIds: [],
       selectedBranchNodeIds: [],
-      currentZoom: 1,
       selectionMode: "browse",
       selectionDrag: null,
       dragBindingsInstalled: false,
