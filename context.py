@@ -71,13 +71,13 @@ class AnalysisContext:
         output_dir: str,
         prefix: str,
         treefile_path: str,
-        report_path: str,
+        report_path: str | None,
         newick_text: str,
     ):
         self.iqtree_output_dir = Path(output_dir)
         self.iqtree_prefix = prefix
         self.treefile_path = Path(treefile_path)
-        self.iqtree_report_path = Path(report_path)
+        self.iqtree_report_path = Path(report_path) if report_path else None
         self.tree_newick_text = newick_text
         self.leaf_label_map.clear()
         self.current_selection = TreeSelection()

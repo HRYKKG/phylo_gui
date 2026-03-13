@@ -1,17 +1,60 @@
 import TkEasyGUI as eg
+from pathlib import Path
 
 from constants import version
 from context import AnalysisContext
-from fasta_utils import parse_fasta_records
-from ui_common import load_file
+from fasta_utils import build_leaf_label_map, parse_fasta_records
+from ui_common import discard_pending_events, load_file
 from ui_alignment import open_alignment_options_window
-from ui_trim import open_trim_options_window
-from ui_iqtree import open_iqtree_options_window
+from ui_iqtree import open_iqtree_result_window
 
 
 def _sync_original_input(context, fasta_text):
     records = parse_fasta_records(fasta_text)
     context.set_original_input(fasta_text, records)
+
+
+def _load_text_file(title):
+    file_path = eg.popup_get_file(title=title)
+    if not file_path:
+        return None, None
+    try:
+        with open(file_path, "r", encoding="utf-8") as handle:
+            return file_path, handle.read()
+    except Exception as exc:
+        eg.popup("Failed to read file:\n" + str(exc))
+        return None, None
+
+
+def _open_tree_result_bypass(context, portal_fasta_text):
+    fasta_path = None
+    fasta_text = portal_fasta_text.strip()
+    if not fasta_text:
+        fasta_path, fasta_text = _load_text_file("Please select a FASTA file")
+        if fasta_text is None:
+            return
+    try:
+        _sync_original_input(context, fasta_text)
+    except ValueError as exc:
+        eg.popup("FASTA input error:\n" + str(exc))
+        return
+
+    tree_path, tree_text = _load_text_file("Please select a tree file")
+    if tree_text is None:
+        return
+
+    tree_path_obj = Path(tree_path)
+    context.set_iqtree_output(
+        output_dir=str(tree_path_obj.parent),
+        prefix=tree_path_obj.stem,
+        treefile_path=str(tree_path_obj),
+        report_path=None,
+        newick_text=tree_text,
+    )
+    context.leaf_label_map = build_leaf_label_map(context.original_records, tree_text)
+    action = open_iqtree_result_window(context)
+    if action == "Open in Alignment":
+        open_alignment_options_window(context)
 
 
 def open_portal_window(context=None):
@@ -28,7 +71,7 @@ def open_portal_window(context=None):
                 expand_y=True,
             )
         ],
-        [eg.Button("Load File"), eg.Button("Go to Alignment"), eg.Button("Go to Trim"), eg.Button("Go to IQTREE"), eg.Button("Quit")],
+        [eg.Button("Load File"), eg.Button("Open Tree Result"), eg.Button("Start Pipeline"), eg.Button("Quit")],
     ]
     win = eg.Window("Phylo_GUI Portal", portal_layout, resizable=True)
     while True:
@@ -43,17 +86,16 @@ def open_portal_window(context=None):
                 _sync_original_input(context, loaded_text)
             except ValueError as exc:
                 eg.popup("FASTA input error:\n" + str(exc))
-        elif event in ("Go to Alignment", "Go to Trim", "Go to IQTREE"):
+        elif event == "Start Pipeline":
             portal_text = values["portal_input"].strip()
             try:
                 _sync_original_input(context, portal_text)
             except ValueError as exc:
                 eg.popup("FASTA input error:\n" + str(exc))
                 continue
-            if event == "Go to Alignment":
-                open_alignment_options_window(context)
-            elif event == "Go to Trim":
-                open_trim_options_window(context)
-            else:
-                open_iqtree_options_window(context)
+            open_alignment_options_window(context)
+            discard_pending_events(win)
+        elif event == "Open Tree Result":
+            _open_tree_result_bypass(context, values["portal_input"])
+            discard_pending_events(win)
     win.close()
