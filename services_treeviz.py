@@ -8,6 +8,7 @@ from pathlib import Path
 from types import ModuleType
 
 import TkEasyGUI as eg
+from remap_support_labels import remap_support_labels
 
 
 def _get_tree_text(win) -> str:
@@ -43,14 +44,25 @@ def _write_display_tree(newick_text: str) -> tuple[Path, bool, str | None]:
     newick_path = tmp_dir / "display_tree.nwk"
     rooted_text = newick_text
     rooted_ok = False
-    error_message = None
+    error_messages = []
     try:
         rooted_text = _midpoint_root_newick(newick_text)
         rooted_ok = True
     except Exception as exc:
         rooted_text = newick_text
-        error_message = str(exc)
+        error_messages.append(f"Midpoint rooting failed: {exc}")
+
+    if rooted_ok:
+        try:
+            rooted_text, _ = remap_support_labels(
+                newick_text,
+                rooted_text,
+                suppress_root_duplicate_labels=False,
+            )
+        except Exception as exc:
+            error_messages.append(f"Support relabeling failed: {exc}")
     newick_path.write_text(rooted_text, encoding="utf-8")
+    error_message = "\n".join(error_messages) if error_messages else None
     return newick_path, rooted_ok, error_message
 
 
@@ -91,7 +103,10 @@ def handle_view_tree(win):
         setattr(win, "display_tree_path", display_tree_path)
         selection_path = create_tree_view_session(win)
         _launch_interactive_viewer_with_selection(display_tree_path, selection_path)
-        if not rooted_ok:
-            eg.popup("Midpoint rooting failed. Showing the original tree instead.\n" + (error_message or ""))
+        if error_message:
+            if rooted_ok:
+                eg.popup("Tree preprocessing warning:\n" + error_message)
+            else:
+                eg.popup("Midpoint rooting failed. Showing the original tree instead.\n" + error_message)
     except Exception as e:
         eg.popup("Failed to display tree:\n" + str(e))
