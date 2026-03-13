@@ -45,7 +45,7 @@ def _build_split_to_label_map(tree):
     collisions = []
 
     for node in tree.traverse("postorder"):
-        if node.is_root():
+        if node.is_root() or node.is_leaf():
             continue
         label = (node.name or "").strip()
         if not label:
@@ -107,6 +107,8 @@ def remap_support_labels(original_tree_text: str, display_tree_text: str, *, sup
     for node in display_tree.traverse("postorder"):
         if node.is_root():
             node.name = ""
+            continue
+        if node.is_leaf():
             continue
         split_key = _canonical_split(node.get_leaf_names(), all_leaves)
         if split_key is None:
