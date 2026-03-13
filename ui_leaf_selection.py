@@ -18,7 +18,7 @@ def _build_selected_fasta(context, selected_leaf_names):
     return records, format_fasta_records(records)
 
 
-def open_leaf_selection_window(context, selection_payload):
+def open_leaf_selection_window(context, selection_payload, parent_iqtree_window=None):
     selected_leaf_names = selection_payload.get("selected_leaf_names", [])
     records, fasta_text = _build_selected_fasta(context, selected_leaf_names)
     missing_count = max(0, len(selected_leaf_names) - len(records))
@@ -59,16 +59,22 @@ def open_leaf_selection_window(context, selection_payload):
                     eg.popup("Failed to save FASTA:\n" + str(exc))
         elif event == "Open in Alignment":
             try:
-                context.set_original_input(fasta_text, records)
+                should_continue = eg.popup_yes_no(
+                    "Opening Alignment with the selected FASTA will reset the current alignment, trim, and IQ-TREE results.\n\nContinue?"
+                )
+                if should_continue != "Yes":
+                    continue
                 window.close()
-                from ui_alignment import open_alignment_options_window
-
-                open_alignment_options_window(context)
-                return
+                return {
+                    "action": "open_alignment",
+                    "fasta_text": fasta_text,
+                    "records": records,
+                }
             except Exception as exc:
                 eg.popup("Failed to open Alignment window:\n" + str(exc))
 
     window.close()
+    return None
 
 
 def load_selection_payload(selection_path):

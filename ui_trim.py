@@ -5,6 +5,7 @@ import tkinter.filedialog as fd
 import TkEasyGUI as eg
 
 from services_trim import get_trimal_version, run_trimal
+from ui_common import discard_pending_events
 
 
 def open_trim_options_window(context):
@@ -26,13 +27,27 @@ def open_trim_options_window(context):
             eg.Radio("strictplus", "trim_mode", key="trim_mode_strictplus"),
             eg.Radio("nogaps", "trim_mode", key="trim_mode_nogap"),
         ],
-        [eg.Button("Run Trim"), eg.Button("Cancel")],
+        [eg.Button("Run Trim"), eg.Button("Back to Alignment"), eg.Button("Skip to IQTREE"), eg.Button("Cancel")],
     ]
-    opt_win = eg.Window("Trim Options", layout, resizable=True)
+    opt_win = eg.Window("Trim Options", layout, modal=True, resizable=True)
     while True:
         event, values = opt_win.read()
         if event in ("Cancel", eg.WINDOW_CLOSED):
             break
+        elif event == "Back to Alignment":
+            opt_win.close()
+            from ui_alignment import open_alignment_options_window
+
+            open_alignment_options_window(context)
+            return
+        elif event == "Skip to IQTREE":
+            trim_input = values["trim_input"].strip()
+            context.set_trim_output(trim_input)
+            opt_win.close()
+            from ui_iqtree import open_iqtree_options_window
+
+            open_iqtree_options_window(context)
+            return
         elif event == "Run Trim":
             mode = (
                 "automated1"
@@ -52,11 +67,15 @@ def open_trim_options_window(context):
                 continue
             context.set_trim_output(trimmed_result)
             action = open_trim_result_window(context, output_path, html_path)
+            discard_pending_events(opt_win)
             if action == "Go to IQTREE":
                 opt_win.close()
                 from ui_iqtree import open_iqtree_options_window
 
                 open_iqtree_options_window(context)
+                return
+            if action == "Close Stage":
+                opt_win.close()
                 return
     opt_win.close()
 
@@ -69,7 +88,7 @@ def open_trim_result_window(context, output_path, html_path):
     """
     layout = [
         [eg.Multiline(key="trimmed_output", default_text=context.trim_output_text or "", size=(80, 20), expand_x=True, expand_y=True)],
-        [eg.Button("Copy"), eg.Button("Show result"), eg.Button("Download"), eg.Button("Go to IQTREE"), eg.Button("Close")],
+        [eg.Button("Copy"), eg.Button("Show result"), eg.Button("Download"), eg.Button("Back to Options"), eg.Button("Go to IQTREE"), eg.Button("Close Stage")],
     ]
     res_win = eg.Window("Trim Result", layout, modal=True, finalize=True, resizable=True)
     ret = None
@@ -77,7 +96,7 @@ def open_trim_result_window(context, output_path, html_path):
         event, vals = res_win.read()
         if vals and "trimmed_output" in vals:
             context.trim_output_text = vals["trimmed_output"]
-        if event in ("Close", eg.WINDOW_CLOSED):
+        if event in ("Back to Options", eg.WINDOW_CLOSED):
             break
         elif event == "Copy":
             eg.set_clipboard(vals["trimmed_output"])
@@ -96,7 +115,7 @@ def open_trim_result_window(context, output_path, html_path):
                     eg.popup("Result saved: " + save_path)
                 except Exception as e:
                     eg.popup("Failed to save file:\n" + str(e))
-        elif event == "Go to IQTREE":
+        elif event in ("Go to IQTREE", "Close Stage"):
             ret = event
             break
     res_win.close()

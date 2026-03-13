@@ -1,19 +1,15 @@
-import tkinter.filedialog as fd
-
 import TkEasyGUI as eg
 
 from fasta_utils import parse_fasta_records
-from ui_common import run_with_progress
+from ui_common import discard_pending_events, run_with_progress
 from services_alignment import run_mafft
 
 
 def open_alignment_options_window(context):
     """
     Opens the alignment options window.
-    When "Run Alignment" is executed, runs MAFFT via a progress window.
-    If the resulting alignment result window returns "Go to Trim" or "Go to IQTREE",
-    the alignment option window is automatically closed and the corresponding option
-    window is opened.
+    When "Run Alignment" is executed, runs MAFFT via a progress window and then
+    advances directly to the Trim options window.
     """
     layout = [
         [eg.Multiline(key="alignment_input", default_text=context.get_alignment_input_text(), size=(80, 20), expand_x=True, expand_y=True)],
@@ -25,13 +21,27 @@ def open_alignment_options_window(context):
             eg.Radio("ginsi", "align_mode", key="mode_ginsi"),
             eg.Radio("einsi", "align_mode", key="mode_einsi"),
         ],
-        [eg.Button("Run Alignment"), eg.Button("Cancel")],
+        [eg.Button("Run Alignment"), eg.Button("Skip to Trim"), eg.Button("Cancel")],
     ]
-    opt_win = eg.Window("Alignment Options", layout, resizable=True)
+    opt_win = eg.Window("Alignment Options", layout, modal=True, resizable=True)
     while True:
         event, values = opt_win.read()
         if event in ("Cancel", eg.WINDOW_CLOSED):
             break
+        elif event == "Skip to Trim":
+            alignment_input = values["alignment_input"].strip()
+            try:
+                records = parse_fasta_records(alignment_input)
+                context.set_original_input(alignment_input, records)
+                context.set_alignment_output(alignment_input)
+            except ValueError as exc:
+                eg.popup("FASTA input error:\n" + str(exc))
+                continue
+            opt_win.close()
+            from ui_trim import open_trim_options_window
+
+            open_trim_options_window(context)
+            return
         elif event == "Run Alignment":
             try:
                 threads = int(values["threads"].strip())
@@ -52,61 +62,14 @@ def open_alignment_options_window(context):
                 eg.popup("FASTA input error:\n" + str(exc))
                 continue
             result = run_with_progress("MAFFT alignment is running...", run_mafft, alignment_input, threads, mode)
+            discard_pending_events(opt_win)
             if not result[0]:
                 eg.popup("Error: MAFFT execution failed.\n" + result[1])
             else:
                 context.set_alignment_output(result[1])
-                action = open_alignment_result_window(context)
-                if action in ("Go to Trim", "Go to IQTREE"):
-                    opt_win.close()
-                    if action == "Go to Trim":
-                        from ui_trim import open_trim_options_window
+                opt_win.close()
+                from ui_trim import open_trim_options_window
 
-                        open_trim_options_window(context)
-                    else:
-                        from ui_iqtree import open_iqtree_options_window
-
-                        open_iqtree_options_window(context)
-                    return
+                open_trim_options_window(context)
+                return
     opt_win.close()
-
-
-def open_alignment_result_window(context):
-    """
-    Displays the alignment result window.
-    If the user selects "Go to Trim" or "Go to IQTREE", returns that event.
-    Otherwise, closes normally.
-    """
-    layout = [
-        [eg.Multiline(key="alignment_output", default_text=context.alignment_output_text or "", size=(80, 20), expand_x=True, expand_y=True)],
-        [eg.Button("Copy"), eg.Button("Download"), eg.Button("Go to Trim"), eg.Button("Go to IQTREE"), eg.Button("Close")],
-    ]
-    res_win = eg.Window("Alignment Result", layout, modal=True, finalize=True, resizable=True)
-    ret = None
-    while True:
-        event, values = res_win.read()
-        if values and "alignment_output" in values:
-            context.alignment_output_text = values["alignment_output"]
-        if event in ("Close", eg.WINDOW_CLOSED):
-            break
-        elif event == "Copy":
-            eg.set_clipboard(values["alignment_output"])
-            eg.popup("Result copied to clipboard.")
-        elif event == "Download":
-            save_path = fd.asksaveasfilename(
-                defaultextension=".txt",
-                initialfile="alignment_result",
-                filetypes=[("Text Files", "*.txt"), ("All Files", "*.*")],
-            )
-            if save_path:
-                try:
-                    with open(save_path, "w") as f:
-                        f.write(values["alignment_output"])
-                    eg.popup("Result saved: " + save_path)
-                except Exception as e:
-                    eg.popup("Failed to save file: " + str(e))
-        elif event in ("Go to Trim", "Go to IQTREE"):
-            ret = event
-            break
-    res_win.close()
-    return ret
