@@ -108,6 +108,29 @@ body {
   color: #f9f6ef;
 }
 
+.toolbar-indicator {
+  display: inline-flex;
+  align-items: center;
+  padding: 0 6px;
+  color: var(--muted);
+  font-size: 13px;
+  white-space: nowrap;
+}
+
+.toolbar-control {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0 6px;
+  color: var(--muted);
+  font-size: 13px;
+  white-space: nowrap;
+}
+
+.toolbar-control input[type="range"] {
+  width: 120px;
+}
+
 .selection-mode-note {
   margin: 0 0 12px;
   color: var(--muted);
@@ -129,6 +152,12 @@ body {
   user-select: none;
   -webkit-user-select: none;
   -webkit-user-drag: none;
+}
+
+.tree-container path.branch,
+.tree-container .branch-tracer,
+.tree-container circle {
+  vector-effect: non-scaling-stroke;
 }
 
 .tree-container.is-rectangle-mode {

@@ -2,6 +2,8 @@
   var appState = {
     tree: null,
     display: null,
+    renderProfile: null,
+    fontSizePx: 10,
     activeNodeName: null,
     selectedLeafNames: [],
     boxSelectedNodeIds: [],
@@ -89,6 +91,14 @@
       }
     });
     return count;
+  }
+
+  function getRenderProfile(tree) {
+    return {
+      nodeRadius: 3,
+      fitPadding: 24,
+      internalFontRatio: 0.85,
+    };
   }
 
   function getActiveNode() {
@@ -310,22 +320,58 @@
 
   function syncPanels() {
     var modeNote = document.getElementById("selection-mode-note");
+    var fontIndicator = document.getElementById("font-size-indicator");
 
     syncSelectedNodePanel();
     syncActionButtons();
     syncSelectedLeavesPanel();
     syncLeafHighlightClasses();
+    if (fontIndicator) {
+      fontIndicator.textContent = "Text " + (appState.fontSizePx || 10) + "px";
+    }
     if (modeNote) {
       modeNote.textContent = getSelectionModeNote();
     }
   }
 
   function captureZoomState() {
-    if (appState.display && appState.display.currentZoomTransform) {
-      appState.currentZoom = appState.display.currentZoomTransform.k;
-    } else {
-      appState.currentZoom = 1;
+    var zoomTransform = null;
+    var svgNode = appState.display && appState.display.svg && appState.display.svg.node ? appState.display.svg.node() : null;
+
+    if (svgNode && svgNode.__zoom && isFinite(svgNode.__zoom.k)) {
+      zoomTransform = svgNode.__zoom;
+    } else if (appState.display && appState.display.currentZoomTransform && isFinite(appState.display.currentZoomTransform.k)) {
+      zoomTransform = appState.display.currentZoomTransform;
     }
+
+    appState.currentZoom = zoomTransform ? zoomTransform.k : 1;
+    if (appState.display) {
+      appState.display.currentZoomTransform = zoomTransform;
+    }
+  }
+
+  function applyRenderProfileToSvg() {
+    var container = document.getElementById("tree-container");
+    var profile = appState.renderProfile;
+    var leafFontSize = appState.fontSizePx || 10;
+    var internalFontSize;
+
+    if (!container || !profile) {
+      return;
+    }
+
+    internalFontSize = Math.max(6, Math.round(leafFontSize * (profile.internalFontRatio || 0.85) * 10) / 10);
+
+    container.querySelectorAll("svg text").forEach(function (text) {
+      var isInternalLabel = Boolean(text.closest && text.closest("g.internal-node"));
+      var targetFontSize = isInternalLabel ? internalFontSize : leafFontSize;
+
+      text.style.fontSize = targetFontSize + "px";
+    });
+
+    container.querySelectorAll("g.internal-node circle").forEach(function (circle) {
+      circle.setAttribute("r", String(profile.nodeRadius));
+    });
   }
 
   function updateSelectedLeafStateFromDisplay() {
@@ -679,6 +725,8 @@
     container.innerHTML = "";
     summarizeInput(newick);
     appState.tree = createTree(newick);
+    appState.renderProfile = getRenderProfile(appState.tree);
+    appState.fontSizePx = 10;
     if (appState.tree.internalNames) {
       appState.tree.internalNames(function (node) {
         return Boolean(getDisplayLabel(node)) && !isLeaf(node);
@@ -712,6 +760,7 @@
       throw new Error("phylotree.js did not return an SVG node.");
     }
     container.appendChild(svgNode);
+    applyRenderProfileToSvg();
     assignViewerNodeIds();
     sanitizeRenderedLabels();
     ensureSelectionBox();
@@ -722,7 +771,7 @@
     appState.boxSelectedNodeIds = [];
     appState.selectedBranchNodeIds = [];
     installDisplayBindings();
-    captureZoomState();
+    fitTreeToViewport({ onlyShrink: true });
     syncPanels();
     window.__PHYLO_TREE__ = appState.tree;
     setStatus("Tree rendered successfully. Right-panel actions are active.", false);
@@ -734,6 +783,7 @@
     appState.selectedBranchNodeIds = [];
     assignViewerNodeIds();
     sanitizeRenderedLabels();
+    applyRenderProfileToSvg();
     installDisplayBindings();
     captureZoomState();
     updateSelectedLeafStateFromDisplay();
@@ -744,7 +794,9 @@
   function bindZoomControls() {
     var zoomInButton = document.getElementById("zoom-in-button");
     var zoomOutButton = document.getElementById("zoom-out-button");
+    var fitTreeButton = document.getElementById("fit-tree-button");
     var resetViewButton = document.getElementById("reset-view-button");
+    var fontSizeSlider = document.getElementById("font-size-slider");
 
     if (zoomInButton) {
       zoomInButton.onclick = function () {
@@ -764,14 +816,32 @@
       };
     }
 
+    if (fitTreeButton) {
+      fitTreeButton.onclick = function () {
+        fitTreeToViewport({ onlyShrink: false });
+        setStatus("Tree fit to viewport.", false);
+      };
+    }
+
     if (resetViewButton) {
       resetViewButton.onclick = function () {
         if (appState.display) {
           appState.display.currentZoomTransform = null;
           appState.display.update();
-          captureZoomState();
+          applyRenderProfileToSvg();
+          fitTreeToViewport({ onlyShrink: true });
           setStatus("View reset.", false);
         }
+      };
+    }
+
+    if (fontSizeSlider) {
+      fontSizeSlider.value = String(appState.fontSizePx || 10);
+      fontSizeSlider.oninput = function () {
+        appState.fontSizePx = parseFloat(fontSizeSlider.value) || 10;
+        applyRenderProfileToSvg();
+        syncPanels();
+        setStatus("Text size adjusted.", false);
       };
     }
 
@@ -787,6 +857,77 @@
         setStatus(appState.selectionMode === "rectangle" ? "Rectangle selection mode enabled." : "Browse mode enabled.", false);
       };
     }
+  }
+
+  function fitTreeToViewport(options) {
+    var container = document.getElementById("tree-container");
+    var svgSelection;
+    var svgNode;
+    var treeGroup;
+    var bbox;
+    var containerWidth;
+    var containerHeight;
+    var padding;
+    var scaleX;
+    var scaleY;
+    var scale;
+    var translateX;
+    var translateY;
+    var baseTransform;
+    var transform;
+    var opts = options || {};
+
+    if (!appState.display || !appState.display.svg || !appState.display.zoomBehavior || !container) {
+      captureZoomState();
+      return;
+    }
+
+    svgSelection = appState.display.svg;
+    svgNode = svgSelection.node ? svgSelection.node() : null;
+    treeGroup = svgSelection.select ? svgSelection.select(".phylotree-container") : null;
+    if (!svgNode || !treeGroup || !treeGroup.node || !treeGroup.node()) {
+      captureZoomState();
+      return;
+    }
+
+    bbox = treeGroup.node().getBBox();
+    if (!bbox || !isFinite(bbox.width) || !isFinite(bbox.height) || bbox.width <= 0 || bbox.height <= 0) {
+      captureZoomState();
+      return;
+    }
+
+    containerWidth = Math.max(container.clientWidth || 0, 1);
+    containerHeight = Math.max(container.clientHeight || 0, 1);
+    padding = (appState.renderProfile && appState.renderProfile.fitPadding) || 32;
+
+    scaleX = (containerWidth - padding * 2) / bbox.width;
+    scaleY = (containerHeight - padding * 2) / bbox.height;
+    scale = Math.min(scaleX, scaleY);
+    if (!isFinite(scale) || scale <= 0) {
+      captureZoomState();
+      return;
+    }
+    if (opts.onlyShrink) {
+      scale = Math.min(scale, 1);
+    }
+
+    baseTransform = appState.display.baseTransform || { x: 0, y: 0 };
+    translateX = padding + (containerWidth - padding * 2 - bbox.width * scale) / 2 - (bbox.x + baseTransform.x) * scale;
+    translateY = padding + (containerHeight - padding * 2 - bbox.height * scale) / 2 - (bbox.y + baseTransform.y) * scale;
+
+    if (window.d3 && window.d3.zoomIdentity) {
+      transform = window.d3.zoomIdentity.translate(translateX, translateY).scale(scale);
+    } else {
+      transform = (svgNode && svgNode.__zoom) || appState.display.currentZoomTransform;
+      if (!transform || !transform.scale || !transform.translate || !isFinite(transform.k) || transform.k === 0) {
+        captureZoomState();
+        return;
+      }
+      transform = transform.scale(1 / transform.k).translate(-transform.x, -transform.y).translate(translateX, translateY).scale(scale);
+    }
+    appState.display.currentZoomTransform = transform;
+    svgSelection.call(appState.display.zoomBehavior.transform, transform);
+    window.requestAnimationFrame(captureZoomState);
   }
 
   function bindNodeActions() {
