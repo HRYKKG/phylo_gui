@@ -1,6 +1,19 @@
 import TkEasyGUI as eg
 
 
+def discard_pending_events(window, max_reads=3):
+    """Best-effort flush of queued GUI events after a modal child window closes."""
+    for _ in range(max_reads):
+        try:
+            event, _ = window.read(timeout=1)
+        except Exception:
+            break
+        if event in (None, eg.WINDOW_CLOSED, "__TIMEOUT__"):
+            break
+        if isinstance(event, str) and event.lower() == "__timeout__":
+            break
+
+
 def run_with_progress(initial_message, run_func, *args, **kwargs):
     """
     Displays a progress window with an initial message, executes the given function
@@ -13,7 +26,7 @@ def run_with_progress(initial_message, run_func, *args, **kwargs):
         [eg.Multiline(key="progress", default_text=initial_message, size=(80, 10))],
         [eg.Button("OK", key="ok", disabled=True)],
     ]
-    prog_win = eg.Window("Progress", prog_layout, resizable=True)
+    prog_win = eg.Window("Progress", prog_layout, modal=True, resizable=True)
     prog_win.refresh()
 
     result = run_func(*args, **kwargs)
