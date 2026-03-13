@@ -13,22 +13,49 @@ ROOT = Path(__file__).resolve().parent
 VENDOR_DIR = ROOT / "vendor"
 VIEWER_DIR = ROOT / "viewer"
 
+# Ordered list of viewer JS modules. Must be loaded in this exact sequence.
+VIEWER_JS_MODULES = [
+    "state",
+    "node-utils",
+    "panels",
+    "selection",
+    "rect-select",
+    "display",
+    "tree-render",
+    "zoom",
+    "node-actions",
+    "app",
+]
+
 
 def _required_assets():
-    return {
+    assets = {
         "phylotree_js": VENDOR_DIR / "phylotree" / "phylotree.js",
         "phylotree_css": VENDOR_DIR / "phylotree" / "phylotree.css",
         "underscore_js": VENDOR_DIR / "underscore" / "underscore.min.js",
         "lodash_js": VENDOR_DIR / "lodash" / "lodash.min.js",
-        "app_js": VIEWER_DIR / "app.js",
         "viewer_css": VIEWER_DIR / "style.css",
     }
+    for name in VIEWER_JS_MODULES:
+        key = name.replace("-", "_") + "_js"
+        assets[key] = VIEWER_DIR / (name + ".js")
+    return assets
 
 
 def _validate_assets():
     missing = [str(path) for path in _required_assets().values() if not path.exists()]
     if missing:
         raise FileNotFoundError("Missing viewer assets:\n" + "\n".join(missing))
+
+
+def _viewer_script_tags(asset_urls):
+    lines = []
+    for name in VIEWER_JS_MODULES:
+        key = name.replace("-", "_") + "_js"
+        lines.append(
+            f'    <script src="{asset_urls[key]}" onerror="window.__viewerReport(\'Failed to load {name}.js\', true)"></script>'
+        )
+    return "\n".join(lines)
 
 
 def _build_html(payload, asset_urls):
@@ -150,7 +177,7 @@ def _build_html(payload, asset_urls):
       window.__viewerReport("Loaded lodash.", false);
     </script>
     <script src="{asset_urls["phylotree_js"]}" onerror="window.__viewerReport('Failed to load phylotree.js', true)"></script>
-    <script src="{asset_urls["app_js"]}" onerror="window.__viewerReport('Failed to load viewer/app.js', true)"></script>
+{_viewer_script_tags(asset_urls)}
   </body>
 </html>
 """
@@ -179,14 +206,18 @@ def _default_output_dir():
 
 
 def _asset_routes():
-    return {
-        "/assets/phylotree.js": _required_assets()["phylotree_js"],
-        "/assets/phylotree.css": _required_assets()["phylotree_css"],
-        "/assets/underscore.min.js": _required_assets()["underscore_js"],
-        "/assets/lodash.min.js": _required_assets()["lodash_js"],
-        "/assets/app.js": _required_assets()["app_js"],
-        "/assets/style.css": _required_assets()["viewer_css"],
+    assets = _required_assets()
+    routes = {
+        "/assets/phylotree.js": assets["phylotree_js"],
+        "/assets/phylotree.css": assets["phylotree_css"],
+        "/assets/underscore.min.js": assets["underscore_js"],
+        "/assets/lodash.min.js": assets["lodash_js"],
+        "/assets/style.css": assets["viewer_css"],
     }
+    for name in VIEWER_JS_MODULES:
+        key = name.replace("-", "_") + "_js"
+        routes[f"/assets/viewer/{name}.js"] = assets[key]
+    return routes
 
 
 class _ViewerRequestHandler(BaseHTTPRequestHandler):
@@ -251,9 +282,11 @@ def _serve_viewer(payload: dict, selection_output: Path, open_browser: bool):
         "phylotree_css": "/assets/phylotree.css",
         "underscore_js": "/assets/underscore.min.js",
         "lodash_js": "/assets/lodash.min.js",
-        "app_js": "/assets/app.js",
         "viewer_css": "/assets/style.css",
     }
+    for name in VIEWER_JS_MODULES:
+        key = name.replace("-", "_") + "_js"
+        asset_urls[key] = f"/assets/viewer/{name}.js"
     html_text = _build_html(payload, asset_urls)
     handler = partial(
         _ViewerRequestHandler,
