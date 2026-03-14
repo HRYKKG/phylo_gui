@@ -1,9 +1,18 @@
 import TkEasyGUI as eg
 
-from ui_common import run_with_progress
+from fasta_utils import build_leaf_label_map
+from feature_flags import ENABLE_DOWNLOAD_DISPLAY_TREE
+from ui_common import (
+    discard_pending_events,
+    install_inactive_button_indicator,
+    install_active_title_indicator,
+    relax_modal_window,
+    run_with_progress,
+)
 from services_iqtree import get_iqtree_version, run_iqtree, get_model_line
 from services_treeviz import handle_view_tree
-from services_downloads import handle_download_newick, handle_download_all_files, handle_add_atha_gene_names
+from services_downloads import handle_download_newick, handle_download_display_tree, handle_download_all_files, handle_add_atha_gene_names
+from ui_leaf_selection import load_selection_payload, open_leaf_selection_window
 
 
 def _sync_tree_output(win_res):
@@ -12,6 +21,22 @@ def _sync_tree_output(win_res):
     if hasattr(win_res, "context"):
         win_res.context.tree_newick_text = tree_text
     return tree_text
+
+
+def _maybe_handle_tree_selection(win_res):
+    selection_path = getattr(win_res, "tree_selection_path", None)
+    if not selection_path or not selection_path.exists():
+        return
+
+    mtime_ns = selection_path.stat().st_mtime_ns
+    if getattr(win_res, "tree_selection_seen_mtime_ns", None) == mtime_ns:
+        return
+
+    selection_payload = load_selection_payload(selection_path)
+    win_res.tree_selection_seen_mtime_ns = mtime_ns
+    action = open_leaf_selection_window(win_res.context, selection_payload, parent_iqtree_window=win_res)
+    discard_pending_events(win_res)
+    return action
 
 
 def open_iqtree_options_window(context):
@@ -36,13 +61,29 @@ def open_iqtree_options_window(context):
         [eg.Text("abayes:"), eg.Checkbox("Use abayes", default=False, key="abayes")],
         [eg.Text("Substitution model:"), eg.Input(default_text="auto", key="subst_model", size=(20, 1))],
         [eg.Text("Output prefix:"), eg.Input(default_text="tmp", key="output_prefix", size=(10, 1))],
-        [eg.Button("Run IQTREE"), eg.Button("Cancel")],
+        [eg.Button("Run IQTREE"), eg.Button("Back to Trim"), eg.Button("Back to Alignment"), eg.Button("Cancel")],
     ]
-    win = eg.Window("IQTREE Options", layout, resizable=True)
+    win = eg.Window("IQTREE Options", layout, modal=True, resizable=True)
+    install_inactive_button_indicator(win)
+    install_active_title_indicator(win)
+    relax_modal_window(win)
+    setattr(context, "close_iqtree_stage_requested", False)
     while True:
         event, values = win.read()
         if event in ("Cancel", eg.WINDOW_CLOSED):
             break
+        elif event == "Back to Trim":
+            win.close()
+            from ui_trim import open_trim_options_window
+
+            open_trim_options_window(context)
+            return
+        elif event == "Back to Alignment":
+            win.close()
+            from ui_alignment import open_alignment_options_window
+
+            open_alignment_options_window(context)
+            return
         elif event == "Run IQTREE":
             try:
                 threads = int(values["threads"].strip())
@@ -67,7 +108,9 @@ def open_iqtree_options_window(context):
                 values["abayes"],
                 subst_model_input,
                 output_prefix,
+                parent_window=win,
             )
+            discard_pending_events(win)
             if not result[0]:
                 eg.popup("Error: IQTREE execution failed.\n" + result[1])
             else:
@@ -81,7 +124,18 @@ def open_iqtree_options_window(context):
                     report_path=result[6],
                     newick_text=tree_content,
                 )
-                open_iqtree_result_window(context)
+                context.leaf_label_map = build_leaf_label_map(context.original_records, tree_content)
+                win.close()
+                action = open_iqtree_result_window(context)
+                if action == "Open in Alignment":
+                    from ui_alignment import open_alignment_options_window
+
+                    open_alignment_options_window(context)
+                    return
+                if action == "Back to IQTREE Options":
+                    open_iqtree_options_window(context)
+                    return
+                return
     win.close()
 
 
@@ -90,24 +144,41 @@ def open_iqtree_result_window(context):
     try:
         treefile = str(context.treefile_path)
         tree_content = context.tree_newick_text or ""
-        model_info = get_model_line(str(context.iqtree_report_path))
+        model_info = get_model_line(str(context.iqtree_report_path)) if context.iqtree_report_path else "External tree loaded"
         result_header = f"{model_info}\n"
+        action_buttons = [eg.Button("View Tree")]
+        utility_buttons = [eg.Button("Copy"), eg.Button("Add Atha gene names"), eg.Button("Download Newick")]
+        if ENABLE_DOWNLOAD_DISPLAY_TREE:
+            utility_buttons.append(eg.Button("Download Display Tree"))
+        utility_buttons.append(eg.Button("Download all files"))
         layout = [
             [eg.Text(result_header)],
             [eg.Multiline(key="tree_output", default_text=tree_content, size=(80, 20), expand_x=True, expand_y=True)],
-            [eg.Button("Copy"), eg.Button("View Tree"), eg.Button("Add Atha gene names")],
-            [eg.Button("Download Newick"), eg.Button("Download all files")],
-            [eg.Button("Close")],
+            action_buttons,
+            utility_buttons,
+            [eg.Button("Back to IQTREE Options"), eg.Button("Close")],
         ]
         win_res = eg.Window("IQTREE Result", layout, modal=True, finalize=True, resizable=True)
+        install_inactive_button_indicator(win_res)
+        install_active_title_indicator(win_res)
+        relax_modal_window(win_res)
         win_res.context = context
         win_res.output_prefix = context.iqtree_prefix
         win_res.tree_content = tree_content
         win_res.treefile = treefile
+        win_res.display_tree_path = None
+        win_res.tree_selection_path = None
+        win_res.tree_selection_seen_mtime_ns = None
+        ret = None
         while True:
-            event, _ = win_res.read()
-            _sync_tree_output(win_res)
+            event, _ = win_res.read(timeout=250)
             if event in ("Close", eg.WINDOW_CLOSED):
+                break
+            _sync_tree_output(win_res)
+            selection_action = _maybe_handle_tree_selection(win_res)
+            if selection_action and selection_action.get("action") == "open_alignment":
+                context.set_original_input(selection_action["fasta_text"], selection_action["records"])
+                ret = "Open in Alignment"
                 break
             elif event == "Copy":
                 eg.set_clipboard(win_res.tree_content)
@@ -118,8 +189,19 @@ def open_iqtree_result_window(context):
                 handle_view_tree(win_res)
             elif event == "Download Newick":
                 handle_download_newick(win_res)
+            elif ENABLE_DOWNLOAD_DISPLAY_TREE and event == "Download Display Tree":
+                handle_download_display_tree(win_res)
             elif event == "Download all files":
                 handle_download_all_files(win_res)
+            elif event == "Back to IQTREE Options":
+                should_continue = eg.popup_yes_no(
+                    "Returning to IQ-TREE Options may discard the current result view.\n\nContinue?"
+                )
+                if should_continue != "Yes":
+                    continue
+                ret = "Back to IQTREE Options"
+                break
         win_res.close()
+        return ret
     except Exception as e:
         eg.popup("Failed to load output file:\n" + str(e))

@@ -15,6 +15,15 @@ def _get_tree_text(win):
     return getattr(win, "tree_content", "")
 
 
+def _annotate_seq_id(seq_id, mapping):
+    if "<" in seq_id:
+        return seq_id
+    for agi, gene_name in mapping.items():
+        if seq_id == agi:
+            return f"{seq_id}<{gene_name}>"
+    return seq_id
+
+
 def handle_download_newick(win):
     """Handles saving the Newick tree to a file."""
     context = getattr(win, "context", None)
@@ -33,6 +42,30 @@ def handle_download_newick(win):
             eg.popup("Failed to save file:\n" + str(e))
 
 
+def handle_download_display_tree(win):
+    """Saves the midpoint-rooted display tree generated for the browser viewer."""
+    display_tree_path = getattr(win, "display_tree_path", None)
+    if not display_tree_path or not Path(display_tree_path).exists():
+        eg.popup("Display tree is not available yet.\nRun 'View Tree' first.")
+        return
+
+    context = getattr(win, "context", None)
+    default_name = context.iqtree_prefix if context and context.iqtree_prefix else (win.output_prefix if hasattr(win, "output_prefix") else "output")
+    save_path = fd.asksaveasfilename(
+        defaultextension=".nwk",
+        initialfile=f"{default_name}_display_tree",
+        filetypes=[("Newick Files", "*.nwk *.newick"), ("All Files", "*.*")],
+    )
+    if not save_path:
+        return
+
+    try:
+        shutil.copyfile(display_tree_path, save_path)
+        eg.popup("Result saved: " + save_path)
+    except Exception as e:
+        eg.popup("Failed to save file:\n" + str(e))
+
+
 def handle_download_all_files(win):
     """Creates an archive of all IQ-TREE output files and allows the user to save it."""
     context = getattr(win, "context", None)
@@ -49,6 +82,9 @@ def handle_download_all_files(win):
 
     try:
         with tempfile.TemporaryDirectory(prefix="iqtree_archive_") as temp_dir:
+            display_tree_path = getattr(win, "display_tree_path", None)
+            if display_tree_path and Path(display_tree_path).exists():
+                shutil.copyfile(display_tree_path, os.path.join(output_dir, f"{output_prefix}_display_tree.nwk"))
             base_name = os.path.join(temp_dir, "archive")
             archive_file = shutil.make_archive(base_name=base_name, format="zip", root_dir=output_dir)
             default_zip_name = f"iqtree_all_{output_prefix}"
@@ -93,6 +129,10 @@ def handle_add_atha_gene_names(win):
     win.tree_content = new_text
     if context is not None:
         context.tree_newick_text = new_text
+        context.leaf_label_map = {
+            _annotate_seq_id(record.seq_id, mapping): record.seq_id
+            for record in context.original_records
+        }
     try:
         treefile_path = str(context.treefile_path) if context and context.treefile_path else win.treefile
         with open(treefile_path, "w") as f:
