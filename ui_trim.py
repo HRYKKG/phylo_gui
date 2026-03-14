@@ -27,7 +27,7 @@ def open_trim_options_window(context):
             eg.Radio("strictplus", "trim_mode", key="trim_mode_strictplus"),
             eg.Radio("nogaps", "trim_mode", key="trim_mode_nogap"),
         ],
-        [eg.Button("Run Trim"), eg.Button("Back to Alignment"), eg.Button("Skip to IQTREE"), eg.Button("Cancel")],
+        [eg.Button("Run Trim"), eg.Button("Skip to IQTREE"), eg.Button("Back to Alignment"), eg.Button("Cancel")],
     ]
     opt_win = eg.Window("Trim Options", layout, modal=True, resizable=True)
     while True:
@@ -88,7 +88,9 @@ def open_trim_result_window(context, output_path, html_path):
     """
     layout = [
         [eg.Multiline(key="trimmed_output", default_text=context.trim_output_text or "", size=(80, 20), expand_x=True, expand_y=True)],
-        [eg.Button("Copy"), eg.Button("Show result"), eg.Button("Download"), eg.Button("Back to Options"), eg.Button("Go to IQTREE"), eg.Button("Close Stage")],
+        [eg.Button("Go to IQTREE")],
+        [eg.Button("Copy"), eg.Button("Show result"), eg.Button("Download")],
+        [eg.Button("Back to Options"), eg.Button("Close Stage")],
     ]
     res_win = eg.Window("Trim Result", layout, modal=True, finalize=True, resizable=True)
     ret = None

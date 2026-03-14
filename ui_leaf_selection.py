@@ -31,7 +31,9 @@ def open_leaf_selection_window(context, selection_payload, parent_iqtree_window=
         [eg.Multiline(key="selected_leaf_names", default_text="", size=(80, 12), expand_x=True, expand_y=True)],
         [eg.Text("Selected FASTA")],
         [eg.Multiline(key="selected_fasta", default_text="", size=(80, 16), expand_x=True, expand_y=True)],
-        [eg.Button("Export FASTA"), eg.Button("Copy FASTA"), eg.Button("Open in Alignment"), eg.Button("Close")],
+        [eg.Button("Open in Alignment")],
+        [eg.Button("Copy FASTA"), eg.Button("Export FASTA")],
+        [eg.Button("Close")],
     ]
     window = eg.Window("Leaf Selection", layout, modal=True, finalize=True, resizable=True)
     window["selected_leaf_names"].update("\n".join(selected_leaf_names))

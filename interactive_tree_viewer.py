@@ -84,8 +84,8 @@ def _build_html(payload, asset_urls):
           <div class="tree-toolbar">
             <button id="zoom-in-button" type="button">Zoom In</button>
             <button id="zoom-out-button" type="button">Zoom Out</button>
+            <button id="reset-view-button" type="button">Reset Zoom</button>
             <button id="fit-tree-button" type="button">Fit to Tree</button>
-            <button id="reset-view-button" type="button">Reset View</button>
             <label class="toolbar-control" for="font-size-slider">
               <span>Text</span>
               <input id="font-size-slider" type="range" min="2" max="16" step="0.5" value="10">

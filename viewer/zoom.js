@@ -114,7 +114,7 @@
           appState.display.update();
           app.applyRenderProfileToSvg();
           app.fitTreeToViewport({ onlyShrink: true });
-          app.setStatus("View reset.", false);
+          app.setStatus("Zoom reset.", false);
         }
       };
     }

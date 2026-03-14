@@ -1,5 +1,6 @@
 import TkEasyGUI as eg
 
+from feature_flags import ENABLE_DOWNLOAD_DISPLAY_TREE
 from ui_common import discard_pending_events, run_with_progress
 from services_iqtree import get_iqtree_version, run_iqtree, get_model_line
 from services_treeviz import handle_view_tree
@@ -130,13 +131,16 @@ def open_iqtree_result_window(context):
         tree_content = context.tree_newick_text or ""
         model_info = get_model_line(str(context.iqtree_report_path)) if context.iqtree_report_path else "External tree loaded"
         result_header = f"{model_info}\n"
-        action_buttons = [eg.Button("Copy"), eg.Button("View Tree"), eg.Button("Add Atha gene names")]
-        download_buttons = [eg.Button("Download Newick"), eg.Button("Download Display Tree"), eg.Button("Download all files")]
+        action_buttons = [eg.Button("View Tree")]
+        utility_buttons = [eg.Button("Copy"), eg.Button("Add Atha gene names"), eg.Button("Download Newick")]
+        if ENABLE_DOWNLOAD_DISPLAY_TREE:
+            utility_buttons.append(eg.Button("Download Display Tree"))
+        utility_buttons.append(eg.Button("Download all files"))
         layout = [
             [eg.Text(result_header)],
             [eg.Multiline(key="tree_output", default_text=tree_content, size=(80, 20), expand_x=True, expand_y=True)],
             action_buttons,
-            download_buttons,
+            utility_buttons,
             [eg.Button("Close")],
         ]
         win_res = eg.Window("IQTREE Result", layout, modal=True, finalize=True, resizable=True)
@@ -167,7 +171,7 @@ def open_iqtree_result_window(context):
                 handle_view_tree(win_res)
             elif event == "Download Newick":
                 handle_download_newick(win_res)
-            elif event == "Download Display Tree":
+            elif ENABLE_DOWNLOAD_DISPLAY_TREE and event == "Download Display Tree":
                 handle_download_display_tree(win_res)
             elif event == "Download all files":
                 handle_download_all_files(win_res)
