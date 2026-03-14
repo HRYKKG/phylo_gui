@@ -96,7 +96,6 @@ def _build_html(payload, asset_urls):
               <input id="node-size-slider" type="range" min="0.5" max="4" step="0.25" value="3">
             </label>
             <span id="node-size-indicator" class="toolbar-indicator">Node 3px</span>
-            <button id="dev-tools-toggle" type="button">Dev Tools: Off</button>
             <button id="rectangle-select-toggle" type="button">Rectangle Select: Off</button>
           </div>
           <p id="selection-mode-note" class="selection-mode-note">Browse mode: click nodes to inspect them.</p>
