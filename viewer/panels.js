@@ -145,6 +145,7 @@
     var appState = app.state;
     var modeNote = document.getElementById("selection-mode-note");
     var fontIndicator = document.getElementById("font-size-indicator");
+    var nodeIndicator = document.getElementById("node-size-indicator");
 
     app.syncSelectedNodePanel();
     app.syncActionButtons();
@@ -152,6 +153,9 @@
     app.syncLeafHighlightClasses();
     if (fontIndicator) {
       fontIndicator.textContent = "Text " + (appState.fontSizePx || 10) + "px";
+    }
+    if (nodeIndicator) {
+      nodeIndicator.textContent = "Node " + (appState.nodeRadiusPx || 3) + "px";
     }
     if (modeNote) {
       modeNote.textContent = getSelectionModeNote();

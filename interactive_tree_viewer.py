@@ -87,9 +87,14 @@ def _build_html(payload, asset_urls):
             <button id="reset-view-button" type="button">Reset View</button>
             <label class="toolbar-control" for="font-size-slider">
               <span>Text</span>
-              <input id="font-size-slider" type="range" min="6" max="16" step="0.5" value="10">
+              <input id="font-size-slider" type="range" min="2" max="16" step="0.5" value="10">
             </label>
             <span id="font-size-indicator" class="toolbar-indicator">Text 10px</span>
+            <label class="toolbar-control" for="node-size-slider">
+              <span>Node</span>
+              <input id="node-size-slider" type="range" min="0.5" max="4" step="0.25" value="3">
+            </label>
+            <span id="node-size-indicator" class="toolbar-indicator">Node 3px</span>
             <button id="rectangle-select-toggle" type="button">Rectangle Select: Off</button>
           </div>
           <p id="selection-mode-note" class="selection-mode-note">Browse mode: click nodes to inspect them.</p>

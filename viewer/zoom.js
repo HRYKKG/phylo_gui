@@ -80,6 +80,7 @@
     var fitTreeButton = document.getElementById("fit-tree-button");
     var resetViewButton = document.getElementById("reset-view-button");
     var fontSizeSlider = document.getElementById("font-size-slider");
+    var nodeSizeSlider = document.getElementById("node-size-slider");
 
     if (zoomInButton) {
       zoomInButton.onclick = function () {
@@ -125,6 +126,16 @@
         app.applyRenderProfileToSvg();
         app.syncPanels();
         app.setStatus("Text size adjusted.", false);
+      };
+    }
+
+    if (nodeSizeSlider) {
+      nodeSizeSlider.value = String(appState.nodeRadiusPx || 3);
+      nodeSizeSlider.oninput = function () {
+        appState.nodeRadiusPx = parseFloat(nodeSizeSlider.value) || 3;
+        app.applyRenderProfileToSvg();
+        app.syncPanels();
+        app.setStatus("Node size adjusted.", false);
       };
     }
 

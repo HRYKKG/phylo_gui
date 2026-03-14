@@ -20,13 +20,14 @@
     var container = document.getElementById("tree-container");
     var profile = appState.renderProfile;
     var leafFontSize = appState.fontSizePx || 10;
+    var nodeRadius = appState.nodeRadiusPx || (profile && profile.nodeRadius) || 3;
     var internalFontSize;
 
     if (!container || !profile) {
       return;
     }
 
-    internalFontSize = Math.max(6, Math.round(leafFontSize * (profile.internalFontRatio || 0.85) * 10) / 10);
+    internalFontSize = Math.max(2, Math.round(leafFontSize * (profile.internalFontRatio || 0.85) * 10) / 10);
 
     container.querySelectorAll("svg text").forEach(function (text) {
       var isInternalLabel = Boolean(text.closest && text.closest("g.internal-node"));
@@ -35,7 +36,7 @@
     });
 
     container.querySelectorAll("g.internal-node circle").forEach(function (circle) {
-      circle.setAttribute("r", String(profile.nodeRadius));
+      circle.setAttribute("r", String(nodeRadius));
     });
   };
 
@@ -62,6 +63,7 @@
     appState.tree = app.createTree(newick);
     appState.renderProfile = app.getRenderProfile();
     appState.fontSizePx = 10;
+    appState.nodeRadiusPx = appState.renderProfile.nodeRadius || 3;
     if (appState.tree.internalNames) {
       appState.tree.internalNames(function (node) {
         return Boolean(app.getDisplayLabel(node)) && !app.isLeaf(node);

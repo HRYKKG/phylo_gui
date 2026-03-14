@@ -5,6 +5,7 @@
       display: null,
       renderProfile: null,
       fontSizePx: 10,
+      nodeRadiusPx: 3,
       activeNodeName: null,
       selectedLeafNames: [],
       boxSelectedNodeIds: [],
