@@ -16,6 +16,7 @@ VIEWER_DIR = ROOT / "viewer"
 # Ordered list of viewer JS modules. Must be loaded in this exact sequence.
 VIEWER_JS_MODULES = [
     "state",
+    "dev-tools",
     "node-utils",
     "panels",
     "selection",
@@ -76,7 +77,7 @@ def _build_html(payload, asset_urls):
           <p class="viewer-kicker">Phylo GUI</p>
           <h1 id="viewer-title">{payload["title"]}</h1>
         </div>
-        <p class="viewer-note">Minimal milestone: local Newick rendering with phylotree.js.</p>
+        <p id="viewer-dev-note" class="viewer-note" data-dev-only hidden>Minimal milestone: local Newick rendering with phylotree.js.</p>
       </header>
       <main class="viewer-main">
         <section class="tree-panel">
@@ -95,6 +96,7 @@ def _build_html(payload, asset_urls):
               <input id="node-size-slider" type="range" min="0.5" max="4" step="0.25" value="3">
             </label>
             <span id="node-size-indicator" class="toolbar-indicator">Node 3px</span>
+            <button id="dev-tools-toggle" type="button">Dev Tools: Off</button>
             <button id="rectangle-select-toggle" type="button">Rectangle Select: Off</button>
           </div>
           <p id="selection-mode-note" class="selection-mode-note">Browse mode: click nodes to inspect them.</p>
@@ -103,8 +105,10 @@ def _build_html(payload, asset_urls):
           </div>
         </section>
         <aside class="info-panel">
-          <h2>Viewer Status</h2>
-          <p id="viewer-status">Loading browser assets...</p>
+          <section id="viewer-status-section" data-dev-only hidden>
+            <h2>Viewer Status</h2>
+            <p id="viewer-status">Loading browser assets...</p>
+          </section>
           <h2>Selected Node</h2>
           <div id="selected-node-card" class="selected-node-card is-empty">
             <p id="selected-node-empty">Click a node to inspect it.</p>
@@ -140,20 +144,32 @@ def _build_html(payload, asset_urls):
             </div>
             <ul id="selected-leaf-list" class="selected-leaf-list" hidden></ul>
           </div>
-          <h2>Input</h2>
-          <p id="viewer-summary">Newick length: {len(payload["newick"])} characters</p>
-          <h2>Notes</h2>
-          <p>This build only proves local interactive rendering. Selection/export comes next.</p>
-          <h2>Debug</h2>
-          <pre id="viewer-debug" class="viewer-debug">Waiting for initialization logs...</pre>
+          <section id="viewer-input-section" data-dev-only hidden>
+            <h2>Input</h2>
+            <p id="viewer-summary">Newick length: {len(payload["newick"])} characters</p>
+          </section>
+          <section id="viewer-notes-section" data-dev-only hidden>
+            <h2>Notes</h2>
+            <p>This build only proves local interactive rendering. Selection/export comes next.</p>
+          </section>
+          <section id="viewer-debug-section" data-dev-only hidden>
+            <h2>Debug</h2>
+            <pre id="viewer-debug" class="viewer-debug">Waiting for initialization logs...</pre>
+          </section>
         </aside>
       </main>
     </div>
     <script>
       window.__TREE_VIEWER_DATA__ = {data_json};
+      document.documentElement.dataset.devMode = window.__TREE_VIEWER_DATA__ && window.__TREE_VIEWER_DATA__.devMode ? "on" : "off";
       window.__viewerReport = function (message, isError) {{
+        var statusSection = document.getElementById("viewer-status-section");
         var status = document.getElementById("viewer-status");
         var debug = document.getElementById("viewer-debug");
+        var devMode = document.documentElement.dataset.devMode === "on";
+        if (statusSection) {{
+          statusSection.hidden = !devMode && !isError;
+        }}
         if (status) {{
           status.textContent = message;
           status.className = isError ? "is-error" : "";
@@ -333,6 +349,7 @@ def main():
     payload = {
         "title": args.title,
         "newick": newick_text,
+        "devMode": False,
         "selectionApiUrl": "/api/selection" if args.selection_output else None,
         "selectionActionLabel": "Send to GUI" if args.selection_output else "Save Selection JSON",
     }

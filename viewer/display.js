@@ -78,6 +78,7 @@
           });
         app.assignViewerNodeIds();
         appState.selectedBranchNodeIds = app.computeSelectedBranchNodeIds();
+        app.applyRenderProfileToSvg();
         app.syncPanels();
       });
       appState.display._callbacksBound = true;

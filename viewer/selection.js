@@ -105,6 +105,7 @@
     appState.selectedLeafNames = names.slice();
     app.assignViewerNodeIds();
     appState.selectedBranchNodeIds = app.computeSelectedBranchNodeIds();
+    app.applyRenderProfileToSvg();
     app.syncPanels();
     app.setStatus(names.length + " leaves selected" + (sourceLabel ? " via " + sourceLabel : "") + ".", false);
   };
@@ -119,6 +120,7 @@
       });
     app.assignViewerNodeIds();
     appState.selectedBranchNodeIds = app.computeSelectedBranchNodeIds();
+    app.applyRenderProfileToSvg();
     app.syncPanels();
   };
 })();

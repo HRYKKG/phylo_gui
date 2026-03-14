@@ -76,6 +76,7 @@
         appState.selectedLeafNames = [];
         appState.boxSelectedNodeIds = [];
         appState.selectedBranchNodeIds = [];
+        app.applyRenderProfileToSvg();
         app.syncPanels();
         app.setStatus("Selected leaves cleared.", false);
       };

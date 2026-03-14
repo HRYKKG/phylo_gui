@@ -6,6 +6,7 @@
       renderProfile: null,
       fontSizePx: 10,
       nodeRadiusPx: 3,
+      devModeEnabled: Boolean(window.__TREE_VIEWER_DATA__ && window.__TREE_VIEWER_DATA__.devMode),
       activeNodeName: null,
       selectedLeafNames: [],
       boxSelectedNodeIds: [],

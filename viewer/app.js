@@ -3,6 +3,7 @@
 
   function init() {
     app.ensureContainer();
+    app.bindDevToolsToggle();
     app.bindZoomControls();
     app.bindNodeActions();
     try {
