@@ -27,6 +27,9 @@
     if (!name) {
       return "";
     }
+    if (!node.parent && name === "root") {
+      return "Midpoint root";
+    }
     if (!app.isLeaf(node) && isSyntheticInternalName(name)) {
       return "";
     }

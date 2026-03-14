@@ -62,7 +62,7 @@
 
     if (clearActiveNodeButton) {
       clearActiveNodeButton.onclick = function () {
-        appState.activeNodeName = null;
+        appState.activeNodeId = null;
         app.syncPanels();
         app.setStatus("Active node cleared.", false);
       };

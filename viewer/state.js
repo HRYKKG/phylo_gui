@@ -7,7 +7,7 @@
       fontSizePx: 10,
       nodeRadiusPx: 3,
       devModeEnabled: Boolean(window.__TREE_VIEWER_DATA__ && window.__TREE_VIEWER_DATA__.devMode),
-      activeNodeName: null,
+      activeNodeId: null,
       selectedLeafNames: [],
       boxSelectedNodeIds: [],
       selectedBranchNodeIds: [],
@@ -42,9 +42,11 @@
 
   app.getActiveNode = function () {
     var appState = app.state;
-    if (!appState.tree || !appState.activeNodeName) {
+    if (!appState.tree || !appState.activeNodeId || !appState.tree.nodes || !appState.tree.nodes.descendants) {
       return null;
     }
-    return appState.tree.getNodeByName(appState.activeNodeName);
+    return appState.tree.nodes.descendants().find(function (node) {
+      return node && node._viewerNodeId === appState.activeNodeId;
+    }) || null;
   };
 })();

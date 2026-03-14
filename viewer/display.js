@@ -57,7 +57,7 @@
       if (event && event.stopPropagation) {
         event.stopPropagation();
       }
-      appState.activeNodeName = node && node.data ? node.data.name : null;
+      appState.activeNodeId = node && node._viewerNodeId ? node._viewerNodeId : null;
       app.syncPanels();
       if (node) {
         app.setStatus("Active node: " + app.formatValue(node.data && node.data.name), false);
