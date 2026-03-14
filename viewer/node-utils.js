@@ -58,6 +58,32 @@
     return count;
   };
 
+  app.getLeafNamesUnderNode = function (node) {
+    var names = [];
+
+    if (!node || !node.descendants) {
+      return names;
+    }
+
+    node.descendants().forEach(function (descendant) {
+      if (app.isLeaf(descendant) && descendant.data && descendant.data.name !== undefined && descendant.data.name !== null) {
+        names.push(String(descendant.data.name));
+      }
+    });
+
+    return names;
+  };
+
+  app.getAllLeafNames = function () {
+    var appState = app.state;
+
+    if (!appState.tree || !appState.tree.nodes || !appState.tree.nodes.descendants) {
+      return [];
+    }
+
+    return app.getLeafNamesUnderNode(appState.tree.nodes);
+  };
+
   app.getRenderProfile = function () {
     return {
       nodeRadius: 3,

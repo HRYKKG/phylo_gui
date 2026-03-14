@@ -46,6 +46,7 @@
     var activeNode = app.getActiveNode();
     var toggleCollapseButton = document.getElementById("toggle-collapse-button");
     var selectDescendantsButton = document.getElementById("select-descendants-button");
+    var selectOppositeSideButton = document.getElementById("select-opposite-side-button");
     var clearActiveNodeButton = document.getElementById("clear-active-node-button");
     var clearSelectedLeavesButton = document.getElementById("clear-selected-leaves-button");
     var copySelectedLeavesButton = document.getElementById("copy-selected-leaves-button");
@@ -58,6 +59,9 @@
     }
     if (selectDescendantsButton) {
       selectDescendantsButton.disabled = !activeNode || app.isLeaf(activeNode);
+    }
+    if (selectOppositeSideButton) {
+      selectOppositeSideButton.disabled = !activeNode || !activeNode.parent;
     }
     if (clearActiveNodeButton) {
       clearActiveNodeButton.disabled = !activeNode;

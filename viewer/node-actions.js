@@ -5,6 +5,7 @@
     var appState = app.state;
     var toggleCollapseButton = document.getElementById("toggle-collapse-button");
     var selectDescendantsButton = document.getElementById("select-descendants-button");
+    var selectOppositeSideButton = document.getElementById("select-opposite-side-button");
     var clearActiveNodeButton = document.getElementById("clear-active-node-button");
     var clearSelectedLeavesButton = document.getElementById("clear-selected-leaves-button");
     var copySelectedLeavesButton = document.getElementById("copy-selected-leaves-button");
@@ -36,6 +37,26 @@
           return node.data.name;
         });
         app.applyLeafSelection(leafNames, "active node descendants", []);
+      };
+    }
+
+    if (selectOppositeSideButton) {
+      selectOppositeSideButton.onclick = function () {
+        var activeNode = app.getActiveNode();
+        var activeLeafNames;
+        var activeLeafSet;
+        var oppositeLeafNames;
+
+        if (!activeNode || !activeNode.parent || !appState.display) {
+          return;
+        }
+
+        activeLeafNames = app.getLeafNamesUnderNode(activeNode);
+        activeLeafSet = new Set(activeLeafNames);
+        oppositeLeafNames = app.getAllLeafNames().filter(function (name) {
+          return !activeLeafSet.has(name);
+        });
+        app.applyLeafSelection(oppositeLeafNames, "opposite side of active node", []);
       };
     }
 

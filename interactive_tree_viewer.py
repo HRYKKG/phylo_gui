@@ -127,6 +127,7 @@ def _build_html(payload, asset_urls):
           <div class="node-actions">
             <button id="toggle-collapse-button" type="button" disabled>Collapse Subtree</button>
             <button id="select-descendants-button" type="button" disabled>Select Descendant Leaves</button>
+            <button id="select-opposite-side-button" type="button" disabled>Select Opposite-Side Leaves</button>
             <button id="clear-active-node-button" type="button" disabled>Clear Active Node</button>
           </div>
           <h2>Selected Leaves</h2>
