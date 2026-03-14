@@ -1,7 +1,13 @@
 import TkEasyGUI as eg
 
 from fasta_utils import parse_fasta_records
-from ui_common import discard_pending_events, relax_modal_window, run_with_progress
+from ui_common import (
+    discard_pending_events,
+    install_inactive_button_indicator,
+    install_active_title_indicator,
+    relax_modal_window,
+    run_with_progress,
+)
 from services_alignment import run_mafft
 
 
@@ -24,6 +30,8 @@ def open_alignment_options_window(context):
         [eg.Button("Run Alignment"), eg.Button("Skip to Trim"), eg.Button("Cancel")],
     ]
     opt_win = eg.Window("Alignment Options", layout, modal=True, resizable=True)
+    install_inactive_button_indicator(opt_win)
+    install_active_title_indicator(opt_win)
     relax_modal_window(opt_win)
     while True:
         event, values = opt_win.read()

@@ -5,7 +5,12 @@ import tkinter.filedialog as fd
 import TkEasyGUI as eg
 
 from services_trim import get_trimal_version, run_trimal
-from ui_common import discard_pending_events, relax_modal_window
+from ui_common import (
+    discard_pending_events,
+    install_inactive_button_indicator,
+    install_active_title_indicator,
+    relax_modal_window,
+)
 
 
 def open_trim_options_window(context):
@@ -30,6 +35,8 @@ def open_trim_options_window(context):
         [eg.Button("Run Trim"), eg.Button("Skip to IQTREE"), eg.Button("Back to Alignment"), eg.Button("Cancel")],
     ]
     opt_win = eg.Window("Trim Options", layout, modal=True, resizable=True)
+    install_inactive_button_indicator(opt_win)
+    install_active_title_indicator(opt_win)
     relax_modal_window(opt_win)
     while True:
         event, values = opt_win.read()
@@ -94,6 +101,8 @@ def open_trim_result_window(context, output_path, html_path):
         [eg.Button("Back to Options"), eg.Button("Close Stage")],
     ]
     res_win = eg.Window("Trim Result", layout, modal=True, finalize=True, resizable=True)
+    install_inactive_button_indicator(res_win)
+    install_active_title_indicator(res_win)
     relax_modal_window(res_win)
     ret = None
     while True:
