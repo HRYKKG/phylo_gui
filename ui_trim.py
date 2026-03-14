@@ -5,7 +5,12 @@ import tkinter.filedialog as fd
 import TkEasyGUI as eg
 
 from services_trim import get_trimal_version, run_trimal
-from ui_common import discard_pending_events
+from ui_common import (
+    discard_pending_events,
+    install_inactive_button_indicator,
+    install_active_title_indicator,
+    relax_modal_window,
+)
 
 
 def open_trim_options_window(context):
@@ -27,9 +32,12 @@ def open_trim_options_window(context):
             eg.Radio("strictplus", "trim_mode", key="trim_mode_strictplus"),
             eg.Radio("nogaps", "trim_mode", key="trim_mode_nogap"),
         ],
-        [eg.Button("Run Trim"), eg.Button("Back to Alignment"), eg.Button("Skip to IQTREE"), eg.Button("Cancel")],
+        [eg.Button("Run Trim"), eg.Button("Skip to IQTREE"), eg.Button("Back to Alignment"), eg.Button("Cancel")],
     ]
     opt_win = eg.Window("Trim Options", layout, modal=True, resizable=True)
+    install_inactive_button_indicator(opt_win)
+    install_active_title_indicator(opt_win)
+    relax_modal_window(opt_win)
     while True:
         event, values = opt_win.read()
         if event in ("Cancel", eg.WINDOW_CLOSED):
@@ -88,9 +96,14 @@ def open_trim_result_window(context, output_path, html_path):
     """
     layout = [
         [eg.Multiline(key="trimmed_output", default_text=context.trim_output_text or "", size=(80, 20), expand_x=True, expand_y=True)],
-        [eg.Button("Copy"), eg.Button("Show result"), eg.Button("Download"), eg.Button("Back to Options"), eg.Button("Go to IQTREE"), eg.Button("Close Stage")],
+        [eg.Button("Go to IQTREE")],
+        [eg.Button("Copy"), eg.Button("Show result"), eg.Button("Download")],
+        [eg.Button("Back to Options"), eg.Button("Close Stage")],
     ]
     res_win = eg.Window("Trim Result", layout, modal=True, finalize=True, resizable=True)
+    install_inactive_button_indicator(res_win)
+    install_active_title_indicator(res_win)
+    relax_modal_window(res_win)
     ret = None
     while True:
         event, vals = res_win.read()

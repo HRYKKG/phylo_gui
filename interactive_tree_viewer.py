@@ -13,22 +13,50 @@ ROOT = Path(__file__).resolve().parent
 VENDOR_DIR = ROOT / "vendor"
 VIEWER_DIR = ROOT / "viewer"
 
+# Ordered list of viewer JS modules. Must be loaded in this exact sequence.
+VIEWER_JS_MODULES = [
+    "state",
+    "dev-tools",
+    "node-utils",
+    "panels",
+    "selection",
+    "rect-select",
+    "display",
+    "tree-render",
+    "zoom",
+    "node-actions",
+    "app",
+]
+
 
 def _required_assets():
-    return {
+    assets = {
         "phylotree_js": VENDOR_DIR / "phylotree" / "phylotree.js",
         "phylotree_css": VENDOR_DIR / "phylotree" / "phylotree.css",
         "underscore_js": VENDOR_DIR / "underscore" / "underscore.min.js",
         "lodash_js": VENDOR_DIR / "lodash" / "lodash.min.js",
-        "app_js": VIEWER_DIR / "app.js",
         "viewer_css": VIEWER_DIR / "style.css",
     }
+    for name in VIEWER_JS_MODULES:
+        key = name.replace("-", "_") + "_js"
+        assets[key] = VIEWER_DIR / (name + ".js")
+    return assets
 
 
 def _validate_assets():
     missing = [str(path) for path in _required_assets().values() if not path.exists()]
     if missing:
         raise FileNotFoundError("Missing viewer assets:\n" + "\n".join(missing))
+
+
+def _viewer_script_tags(asset_urls):
+    lines = []
+    for name in VIEWER_JS_MODULES:
+        key = name.replace("-", "_") + "_js"
+        lines.append(
+            f'    <script src="{asset_urls[key]}" onerror="window.__viewerReport(\'Failed to load {name}.js\', true)"></script>'
+        )
+    return "\n".join(lines)
 
 
 def _build_html(payload, asset_urls):
@@ -49,20 +77,25 @@ def _build_html(payload, asset_urls):
           <p class="viewer-kicker">Phylo GUI</p>
           <h1 id="viewer-title">{payload["title"]}</h1>
         </div>
-        <p class="viewer-note">Minimal milestone: local Newick rendering with phylotree.js.</p>
+        <p id="viewer-dev-note" class="viewer-note" data-dev-only hidden>Minimal milestone: local Newick rendering with phylotree.js.</p>
       </header>
       <main class="viewer-main">
         <section class="tree-panel">
           <div class="tree-toolbar">
             <button id="zoom-in-button" type="button">Zoom In</button>
             <button id="zoom-out-button" type="button">Zoom Out</button>
+            <button id="reset-view-button" type="button">Reset Zoom</button>
             <button id="fit-tree-button" type="button">Fit to Tree</button>
-            <button id="reset-view-button" type="button">Reset View</button>
             <label class="toolbar-control" for="font-size-slider">
               <span>Text</span>
-              <input id="font-size-slider" type="range" min="6" max="16" step="0.5" value="10">
+              <input id="font-size-slider" type="range" min="2" max="16" step="0.5" value="10">
             </label>
             <span id="font-size-indicator" class="toolbar-indicator">Text 10px</span>
+            <label class="toolbar-control" for="node-size-slider">
+              <span>Node</span>
+              <input id="node-size-slider" type="range" min="0.5" max="4" step="0.25" value="3">
+            </label>
+            <span id="node-size-indicator" class="toolbar-indicator">Node 3px</span>
             <button id="rectangle-select-toggle" type="button">Rectangle Select: Off</button>
           </div>
           <p id="selection-mode-note" class="selection-mode-note">Browse mode: click nodes to inspect them.</p>
@@ -71,8 +104,10 @@ def _build_html(payload, asset_urls):
           </div>
         </section>
         <aside class="info-panel">
-          <h2>Viewer Status</h2>
-          <p id="viewer-status">Loading browser assets...</p>
+          <section id="viewer-status-section" data-dev-only hidden>
+            <h2>Viewer Status</h2>
+            <p id="viewer-status">Loading browser assets...</p>
+          </section>
           <h2>Selected Node</h2>
           <div id="selected-node-card" class="selected-node-card is-empty">
             <p id="selected-node-empty">Click a node to inspect it.</p>
@@ -95,6 +130,7 @@ def _build_html(payload, asset_urls):
           <div class="node-actions">
             <button id="toggle-collapse-button" type="button" disabled>Collapse Subtree</button>
             <button id="select-descendants-button" type="button" disabled>Select Descendant Leaves</button>
+            <button id="select-opposite-side-button" type="button" disabled>Select Opposite-Side Leaves</button>
             <button id="clear-active-node-button" type="button" disabled>Clear Active Node</button>
           </div>
           <h2>Selected Leaves</h2>
@@ -107,20 +143,32 @@ def _build_html(payload, asset_urls):
             </div>
             <ul id="selected-leaf-list" class="selected-leaf-list" hidden></ul>
           </div>
-          <h2>Input</h2>
-          <p id="viewer-summary">Newick length: {len(payload["newick"])} characters</p>
-          <h2>Notes</h2>
-          <p>This build only proves local interactive rendering. Selection/export comes next.</p>
-          <h2>Debug</h2>
-          <pre id="viewer-debug" class="viewer-debug">Waiting for initialization logs...</pre>
+          <section id="viewer-input-section" data-dev-only hidden>
+            <h2>Input</h2>
+            <p id="viewer-summary">Newick length: {len(payload["newick"])} characters</p>
+          </section>
+          <section id="viewer-notes-section" data-dev-only hidden>
+            <h2>Notes</h2>
+            <p>This build only proves local interactive rendering. Selection/export comes next.</p>
+          </section>
+          <section id="viewer-debug-section" data-dev-only hidden>
+            <h2>Debug</h2>
+            <pre id="viewer-debug" class="viewer-debug">Waiting for initialization logs...</pre>
+          </section>
         </aside>
       </main>
     </div>
     <script>
       window.__TREE_VIEWER_DATA__ = {data_json};
+      document.documentElement.dataset.devMode = window.__TREE_VIEWER_DATA__ && window.__TREE_VIEWER_DATA__.devMode ? "on" : "off";
       window.__viewerReport = function (message, isError) {{
+        var statusSection = document.getElementById("viewer-status-section");
         var status = document.getElementById("viewer-status");
         var debug = document.getElementById("viewer-debug");
+        var devMode = document.documentElement.dataset.devMode === "on";
+        if (statusSection) {{
+          statusSection.hidden = !devMode && !isError;
+        }}
         if (status) {{
           status.textContent = message;
           status.className = isError ? "is-error" : "";
@@ -150,7 +198,7 @@ def _build_html(payload, asset_urls):
       window.__viewerReport("Loaded lodash.", false);
     </script>
     <script src="{asset_urls["phylotree_js"]}" onerror="window.__viewerReport('Failed to load phylotree.js', true)"></script>
-    <script src="{asset_urls["app_js"]}" onerror="window.__viewerReport('Failed to load viewer/app.js', true)"></script>
+{_viewer_script_tags(asset_urls)}
   </body>
 </html>
 """
@@ -179,14 +227,18 @@ def _default_output_dir():
 
 
 def _asset_routes():
-    return {
-        "/assets/phylotree.js": _required_assets()["phylotree_js"],
-        "/assets/phylotree.css": _required_assets()["phylotree_css"],
-        "/assets/underscore.min.js": _required_assets()["underscore_js"],
-        "/assets/lodash.min.js": _required_assets()["lodash_js"],
-        "/assets/app.js": _required_assets()["app_js"],
-        "/assets/style.css": _required_assets()["viewer_css"],
+    assets = _required_assets()
+    routes = {
+        "/assets/phylotree.js": assets["phylotree_js"],
+        "/assets/phylotree.css": assets["phylotree_css"],
+        "/assets/underscore.min.js": assets["underscore_js"],
+        "/assets/lodash.min.js": assets["lodash_js"],
+        "/assets/style.css": assets["viewer_css"],
     }
+    for name in VIEWER_JS_MODULES:
+        key = name.replace("-", "_") + "_js"
+        routes[f"/assets/viewer/{name}.js"] = assets[key]
+    return routes
 
 
 class _ViewerRequestHandler(BaseHTTPRequestHandler):
@@ -251,9 +303,11 @@ def _serve_viewer(payload: dict, selection_output: Path, open_browser: bool):
         "phylotree_css": "/assets/phylotree.css",
         "underscore_js": "/assets/underscore.min.js",
         "lodash_js": "/assets/lodash.min.js",
-        "app_js": "/assets/app.js",
         "viewer_css": "/assets/style.css",
     }
+    for name in VIEWER_JS_MODULES:
+        key = name.replace("-", "_") + "_js"
+        asset_urls[key] = f"/assets/viewer/{name}.js"
     html_text = _build_html(payload, asset_urls)
     handler = partial(
         _ViewerRequestHandler,
@@ -294,6 +348,7 @@ def main():
     payload = {
         "title": args.title,
         "newick": newick_text,
+        "devMode": False,
         "selectionApiUrl": "/api/selection" if args.selection_output else None,
         "selectionActionLabel": "Send to GUI" if args.selection_output else "Save Selection JSON",
     }

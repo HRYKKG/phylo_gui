@@ -4,7 +4,15 @@ from pathlib import Path
 from constants import version
 from context import AnalysisContext
 from fasta_utils import build_leaf_label_map, parse_fasta_records
-from ui_common import discard_pending_events, load_file
+from feature_flags import ENABLE_PORTAL_TREE_RESULT_BYPASS
+from ui_common import (
+    discard_pending_events,
+    install_inactive_button_indicator,
+    install_active_title_indicator,
+    load_file,
+    reactivate_window,
+    set_window_buttons_disabled,
+)
 from ui_alignment import open_alignment_options_window
 from ui_iqtree import open_iqtree_result_window
 
@@ -60,6 +68,10 @@ def _open_tree_result_bypass(context, portal_fasta_text):
 def open_portal_window(context=None):
     """Opens the main portal window for Phylo_GUI."""
     context = context or AnalysisContext()
+    action_buttons = [eg.Button("Start Pipeline"), eg.Button("Load File")]
+    if ENABLE_PORTAL_TREE_RESULT_BYPASS:
+        action_buttons.append(eg.Button("Open Tree Result"))
+    action_buttons.append(eg.Button("Quit"))
     portal_layout = [
         [eg.Text("Phylo_GUI Portal: " + version)],
         [
@@ -71,9 +83,12 @@ def open_portal_window(context=None):
                 expand_y=True,
             )
         ],
-        [eg.Button("Load File"), eg.Button("Open Tree Result"), eg.Button("Start Pipeline"), eg.Button("Quit")],
+        action_buttons,
     ]
     win = eg.Window("Phylo_GUI Portal", portal_layout, resizable=True)
+    install_inactive_button_indicator(win)
+    install_active_title_indicator(win)
+    win.context = context
     while True:
         event, values = win.read()
         if event in ("Quit", eg.WINDOW_CLOSED):
@@ -93,9 +108,19 @@ def open_portal_window(context=None):
             except ValueError as exc:
                 eg.popup("FASTA input error:\n" + str(exc))
                 continue
-            open_alignment_options_window(context)
+            set_window_buttons_disabled(win, True)
+            try:
+                open_alignment_options_window(context)
+            finally:
+                set_window_buttons_disabled(win, False)
+                reactivate_window(win)
             discard_pending_events(win)
-        elif event == "Open Tree Result":
-            _open_tree_result_bypass(context, values["portal_input"])
+        elif ENABLE_PORTAL_TREE_RESULT_BYPASS and event == "Open Tree Result":
+            set_window_buttons_disabled(win, True)
+            try:
+                _open_tree_result_bypass(context, values["portal_input"])
+            finally:
+                set_window_buttons_disabled(win, False)
+                reactivate_window(win)
             discard_pending_events(win)
     win.close()
