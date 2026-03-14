@@ -75,6 +75,12 @@ def open_trim_options_window(context):
                 continue
             context.set_trim_output(trimmed_result)
             action = open_trim_result_window(context, output_path, html_path)
+            for _p in (output_path, html_path):
+                try:
+                    if _p and os.path.exists(_p):
+                        os.remove(_p)
+                except OSError:
+                    pass
             discard_pending_events(opt_win)
             if action == "Go to IQTREE":
                 opt_win.close()

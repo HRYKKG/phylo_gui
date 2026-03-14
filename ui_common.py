@@ -234,6 +234,8 @@ def run_with_progress(initial_message, run_func, *args, parent_window=None, **kw
         prog_win["ok"].update(disabled=False)
         while True:
             event_prog, _ = prog_win.read()
+            if event_prog in (None, eg.WINDOW_CLOSED):
+                break
             if event_prog and event_prog.lower() == "ok":
                 break
         prog_win.close()

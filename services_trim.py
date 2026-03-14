@@ -6,10 +6,10 @@ import tempfile
 def get_trimal_version():
     """Returns the version of trimal or an error message."""
     try:
-        result = subprocess.run(["trimal", "--version"], text=True, capture_output=True, check=True)
+        result = subprocess.run(["trimal", "--version"], text=True, capture_output=True)
         output = result.stdout.strip() or result.stderr.strip()
         return output if output else "Failed to retrieve version"
-    except (subprocess.CalledProcessError, OSError):
+    except OSError:
         return "Failed to retrieve version"
 
 
@@ -36,6 +36,8 @@ def run_trimal(trim_input, mode):
         err = e.stderr if isinstance(e, subprocess.CalledProcessError) and e.stderr else str(e)
         return False, err, None, None, None
 
+    if os.path.exists(input_path):
+        os.remove(input_path)
     with open(output_path, "r") as f:
         trimmed_result = f.read()
     return True, "trimal execution complete", trimmed_result, output_path, html_path

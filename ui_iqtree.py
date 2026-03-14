@@ -1,5 +1,6 @@
 import TkEasyGUI as eg
 
+from fasta_utils import build_leaf_label_map
 from feature_flags import ENABLE_DOWNLOAD_DISPLAY_TREE
 from ui_common import (
     discard_pending_events,
@@ -123,6 +124,7 @@ def open_iqtree_options_window(context):
                     report_path=result[6],
                     newick_text=tree_content,
                 )
+                context.leaf_label_map = build_leaf_label_map(context.original_records, tree_content)
                 win.close()
                 action = open_iqtree_result_window(context)
                 if action == "Open in Alignment":
@@ -170,13 +172,13 @@ def open_iqtree_result_window(context):
         ret = None
         while True:
             event, _ = win_res.read(timeout=250)
+            if event in ("Close", eg.WINDOW_CLOSED):
+                break
             _sync_tree_output(win_res)
             selection_action = _maybe_handle_tree_selection(win_res)
             if selection_action and selection_action.get("action") == "open_alignment":
                 context.set_original_input(selection_action["fasta_text"], selection_action["records"])
                 ret = "Open in Alignment"
-                break
-            if event in ("Close", eg.WINDOW_CLOSED):
                 break
             elif event == "Copy":
                 eg.set_clipboard(win_res.tree_content)
