@@ -4,6 +4,7 @@ import tkinter.filedialog as fd
 import TkEasyGUI as eg
 
 from fasta_utils import format_fasta_records, select_records_by_ids
+from ui_common import relax_modal_window
 
 
 def _resolve_selected_ids(context, selected_leaf_names):
@@ -36,6 +37,7 @@ def open_leaf_selection_window(context, selection_payload, parent_iqtree_window=
         [eg.Button("Close")],
     ]
     window = eg.Window("Leaf Selection", layout, modal=True, finalize=True, resizable=True)
+    relax_modal_window(window)
     window["selected_leaf_names"].update("\n".join(selected_leaf_names))
     window["selected_fasta"].update(fasta_text)
 

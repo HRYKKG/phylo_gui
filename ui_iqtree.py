@@ -1,7 +1,7 @@
 import TkEasyGUI as eg
 
 from feature_flags import ENABLE_DOWNLOAD_DISPLAY_TREE
-from ui_common import discard_pending_events, run_with_progress
+from ui_common import discard_pending_events, relax_modal_window, run_with_progress
 from services_iqtree import get_iqtree_version, run_iqtree, get_model_line
 from services_treeviz import handle_view_tree
 from services_downloads import handle_download_newick, handle_download_display_tree, handle_download_all_files, handle_add_atha_gene_names
@@ -57,6 +57,7 @@ def open_iqtree_options_window(context):
         [eg.Button("Run IQTREE"), eg.Button("Back to Trim"), eg.Button("Back to Alignment"), eg.Button("Cancel")],
     ]
     win = eg.Window("IQTREE Options", layout, modal=True, resizable=True)
+    relax_modal_window(win)
     setattr(context, "close_iqtree_stage_requested", False)
     while True:
         event, values = win.read()
@@ -98,6 +99,7 @@ def open_iqtree_options_window(context):
                 values["abayes"],
                 subst_model_input,
                 output_prefix,
+                parent_window=win,
             )
             discard_pending_events(win)
             if not result[0]:
@@ -113,14 +115,17 @@ def open_iqtree_options_window(context):
                     report_path=result[6],
                     newick_text=tree_content,
                 )
+                win.close()
                 action = open_iqtree_result_window(context)
-                discard_pending_events(win)
                 if action == "Open in Alignment":
-                    win.close()
                     from ui_alignment import open_alignment_options_window
 
                     open_alignment_options_window(context)
                     return
+                if action == "Back to IQTREE Options":
+                    open_iqtree_options_window(context)
+                    return
+                return
     win.close()
 
 
@@ -141,9 +146,10 @@ def open_iqtree_result_window(context):
             [eg.Multiline(key="tree_output", default_text=tree_content, size=(80, 20), expand_x=True, expand_y=True)],
             action_buttons,
             utility_buttons,
-            [eg.Button("Close")],
+            [eg.Button("Back to IQTREE Options"), eg.Button("Close")],
         ]
         win_res = eg.Window("IQTREE Result", layout, modal=True, finalize=True, resizable=True)
+        relax_modal_window(win_res)
         win_res.context = context
         win_res.output_prefix = context.iqtree_prefix
         win_res.tree_content = tree_content
@@ -175,6 +181,14 @@ def open_iqtree_result_window(context):
                 handle_download_display_tree(win_res)
             elif event == "Download all files":
                 handle_download_all_files(win_res)
+            elif event == "Back to IQTREE Options":
+                should_continue = eg.popup_yes_no(
+                    "Returning to IQ-TREE Options may discard the current result view.\n\nContinue?"
+                )
+                if should_continue != "Yes":
+                    continue
+                ret = "Back to IQTREE Options"
+                break
         win_res.close()
         return ret
     except Exception as e:

@@ -79,6 +79,7 @@ def open_portal_window(context=None):
         action_buttons,
     ]
     win = eg.Window("Phylo_GUI Portal", portal_layout, resizable=True)
+    win.context = context
     while True:
         event, values = win.read()
         if event in ("Quit", eg.WINDOW_CLOSED):

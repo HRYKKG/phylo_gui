@@ -22,6 +22,7 @@ class TreeSelection:
 class AnalysisContext:
     original_fasta_text: str = ""
     original_records: list[SequenceRecord] = field(default_factory=list)
+    last_open_dir: Path | None = None
 
     alignment_output_text: str | None = None
     trim_output_text: str | None = None
