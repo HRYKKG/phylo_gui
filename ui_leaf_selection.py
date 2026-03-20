@@ -8,6 +8,7 @@ from ui_common import (
     install_inactive_button_indicator,
     install_active_title_indicator,
     relax_modal_window,
+    reactivate_window,
 )
 
 
@@ -54,24 +55,29 @@ def open_leaf_selection_window(context, selection_payload, parent_iqtree_window=
         if event == "Copy FASTA":
             eg.set_clipboard(fasta_text)
             eg.popup("Selected FASTA copied to clipboard.")
+            reactivate_window(window)
         elif event == "Export FASTA":
             save_path = fd.asksaveasfilename(
                 defaultextension=".fa",
                 initialfile="selected_leaves",
                 filetypes=[("FASTA Files", "*.fa *.fasta"), ("All Files", "*.*")],
             )
+            reactivate_window(window)
             if save_path:
                 try:
                     with open(save_path, "w", encoding="utf-8") as handle:
                         handle.write(fasta_text)
                     eg.popup("Selected FASTA saved: " + save_path)
+                    reactivate_window(window)
                 except Exception as exc:
                     eg.popup("Failed to save FASTA:\n" + str(exc))
+                    reactivate_window(window)
         elif event == "Open in Alignment":
             try:
                 should_continue = eg.popup_yes_no(
                     "Opening Alignment with the selected FASTA will reset the current alignment, trim, and IQ-TREE results.\n\nContinue?"
                 )
+                reactivate_window(window)
                 if should_continue != "Yes":
                     continue
                 window.close()
@@ -82,6 +88,7 @@ def open_leaf_selection_window(context, selection_payload, parent_iqtree_window=
                 }
             except Exception as exc:
                 eg.popup("Failed to open Alignment window:\n" + str(exc))
+                reactivate_window(window)
 
     window.close()
     return None

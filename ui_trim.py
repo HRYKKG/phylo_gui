@@ -10,6 +10,7 @@ from ui_common import (
     install_inactive_button_indicator,
     install_active_title_indicator,
     relax_modal_window,
+    reactivate_window,
 )
 
 
@@ -72,6 +73,7 @@ def open_trim_options_window(context):
             success, message, trimmed_result, output_path, html_path = run_trimal(trim_input, mode)
             if not success:
                 eg.popup("Error: trimal execution failed.\n" + message)
+                reactivate_window(opt_win)
                 continue
             context.set_trim_output(trimmed_result)
             action = open_trim_result_window(context, output_path, html_path)
@@ -120,6 +122,7 @@ def open_trim_result_window(context, output_path, html_path):
         elif event == "Copy":
             eg.set_clipboard(vals["trimmed_output"])
             eg.popup("Result copied to clipboard.")
+            reactivate_window(res_win)
         elif event == "Show result":
             webbrowser.open("file://" + os.path.abspath(html_path))
         elif event == "Download":
@@ -127,13 +130,16 @@ def open_trim_result_window(context, output_path, html_path):
                 defaultextension=".fasta",
                 filetypes=[("FASTA Files", "*.fasta"), ("Text Files", "*.txt"), ("All Files", "*.*")],
             )
+            reactivate_window(res_win)
             if save_path:
                 try:
                     with open(save_path, "w") as f:
                         f.write(vals["trimmed_output"])
                     eg.popup("Result saved: " + save_path)
+                    reactivate_window(res_win)
                 except Exception as e:
                     eg.popup("Failed to save file:\n" + str(e))
+                    reactivate_window(res_win)
         elif event in ("Go to IQTREE", "Close Stage"):
             ret = event
             break

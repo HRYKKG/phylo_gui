@@ -6,6 +6,7 @@ from ui_common import (
     install_inactive_button_indicator,
     install_active_title_indicator,
     relax_modal_window,
+    reactivate_window,
     run_with_progress,
 )
 from services_alignment import run_mafft
@@ -45,6 +46,7 @@ def open_alignment_options_window(context):
                 context.set_alignment_output(alignment_input)
             except ValueError as exc:
                 eg.popup("FASTA input error:\n" + str(exc))
+                reactivate_window(opt_win)
                 continue
             opt_win.close()
             from ui_trim import open_trim_options_window
@@ -58,6 +60,7 @@ def open_alignment_options_window(context):
                     raise ValueError("Threads must be at least 1.")
             except ValueError as ve:
                 eg.popup("Threads input error: " + str(ve))
+                reactivate_window(opt_win)
                 continue
             mode = (
                 "auto"
@@ -69,6 +72,7 @@ def open_alignment_options_window(context):
                 context.set_original_input(alignment_input, parse_fasta_records(alignment_input))
             except ValueError as exc:
                 eg.popup("FASTA input error:\n" + str(exc))
+                reactivate_window(opt_win)
                 continue
             result = run_with_progress(
                 "MAFFT alignment is running...",
@@ -81,6 +85,7 @@ def open_alignment_options_window(context):
             discard_pending_events(opt_win)
             if not result[0]:
                 eg.popup("Error: MAFFT execution failed.\n" + result[1])
+                reactivate_window(opt_win)
             else:
                 context.set_alignment_output(result[1])
                 opt_win.close()

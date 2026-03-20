@@ -7,6 +7,7 @@ from ui_common import (
     install_inactive_button_indicator,
     install_active_title_indicator,
     relax_modal_window,
+    reactivate_window,
     run_with_progress,
 )
 from services_iqtree import get_iqtree_version, run_iqtree, get_model_line
@@ -37,6 +38,11 @@ def _maybe_handle_tree_selection(win_res):
     action = open_leaf_selection_window(win_res.context, selection_payload, parent_iqtree_window=win_res)
     discard_pending_events(win_res)
     return action
+
+
+def _restore_result_window_interaction(win_res):
+    discard_pending_events(win_res)
+    reactivate_window(win_res)
 
 
 def open_iqtree_options_window(context):
@@ -89,6 +95,7 @@ def open_iqtree_options_window(context):
                 threads = int(values["threads"].strip())
             except ValueError as ve:
                 eg.popup("Threads input error: " + str(ve))
+                reactivate_window(win)
                 continue
 
             ufboot_input = values["ufboot"].strip()
@@ -113,6 +120,7 @@ def open_iqtree_options_window(context):
             discard_pending_events(win)
             if not result[0]:
                 eg.popup("Error: IQTREE execution failed.\n" + result[1])
+                reactivate_window(win)
             else:
                 treefile = result[2]
                 with open(treefile, "r") as f:
@@ -183,20 +191,27 @@ def open_iqtree_result_window(context):
             elif event == "Copy":
                 eg.set_clipboard(win_res.tree_content)
                 eg.popup("Result copied to clipboard.")
+                _restore_result_window_interaction(win_res)
             elif event == "Add Atha gene names":
                 handle_add_atha_gene_names(win_res)
+                _restore_result_window_interaction(win_res)
             elif event == "View Tree":
                 handle_view_tree(win_res)
+                _restore_result_window_interaction(win_res)
             elif event == "Download Newick":
                 handle_download_newick(win_res)
+                _restore_result_window_interaction(win_res)
             elif ENABLE_DOWNLOAD_DISPLAY_TREE and event == "Download Display Tree":
                 handle_download_display_tree(win_res)
+                _restore_result_window_interaction(win_res)
             elif event == "Download all files":
                 handle_download_all_files(win_res)
+                _restore_result_window_interaction(win_res)
             elif event == "Back to IQTREE Options":
                 should_continue = eg.popup_yes_no(
                     "Returning to IQ-TREE Options may discard the current result view.\n\nContinue?"
                 )
+                _restore_result_window_interaction(win_res)
                 if should_continue != "Yes":
                     continue
                 ret = "Back to IQTREE Options"
