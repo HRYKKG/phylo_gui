@@ -1,6 +1,8 @@
+import json
+
 import TkEasyGUI as eg
 
-from fasta_utils import build_leaf_label_map
+from fasta_utils import build_leaf_label_map, parse_fasta_records
 from feature_flags import ENABLE_DOWNLOAD_DISPLAY_TREE
 from ui_common import (
     discard_pending_events,
@@ -29,11 +31,19 @@ def _maybe_handle_tree_selection(win_res):
     if not selection_path or not selection_path.exists():
         return
 
-    mtime_ns = selection_path.stat().st_mtime_ns
+    try:
+        mtime_ns = selection_path.stat().st_mtime_ns
+    except OSError:
+        return
     if getattr(win_res, "tree_selection_seen_mtime_ns", None) == mtime_ns:
         return
 
-    selection_payload = load_selection_payload(selection_path)
+    try:
+        selection_payload = load_selection_payload(selection_path)
+    except (OSError, json.JSONDecodeError):
+        # The browser callback normally replaces this file atomically. If an
+        # external process changes it concurrently, retry on the next poll.
+        return
     win_res.tree_selection_seen_mtime_ns = mtime_ns
     action = open_leaf_selection_window(win_res.context, selection_payload, parent_iqtree_window=win_res)
     discard_pending_events(win_res)
@@ -80,16 +90,10 @@ def open_iqtree_options_window(context):
             break
         elif event == "Back to Trim":
             win.close()
-            from ui_trim import open_trim_options_window
-
-            open_trim_options_window(context)
-            return
+            return "trim"
         elif event == "Back to Alignment":
             win.close()
-            from ui_alignment import open_alignment_options_window
-
-            open_alignment_options_window(context)
-            return
+            return "alignment"
         elif event == "Run IQTREE":
             try:
                 threads = int(values["threads"].strip())
@@ -104,6 +108,12 @@ def open_iqtree_options_window(context):
             subst_model_input = values["subst_model"].strip()
             iqtree_input = values["iqtree_input"].strip()
             output_prefix = values["output_prefix"].strip()
+            try:
+                parse_fasta_records(iqtree_input)
+            except ValueError as exc:
+                eg.popup("FASTA input error:\n" + str(exc))
+                reactivate_window(win)
+                continue
             result = run_with_progress(
                 "IQTREE analysis is running...",
                 run_iqtree,
@@ -136,19 +146,17 @@ def open_iqtree_options_window(context):
                 win.close()
                 action = open_iqtree_result_window(context)
                 if action == "Open in Alignment":
-                    from ui_alignment import open_alignment_options_window
-
-                    open_alignment_options_window(context)
-                    return
+                    return "alignment"
                 if action == "Back to IQTREE Options":
-                    open_iqtree_options_window(context)
-                    return
-                return
+                    return "iqtree"
+                return None
     win.close()
+    return None
 
 
 def open_iqtree_result_window(context):
     """Displays the IQ-TREE result window and offers further actions."""
+    win_res = None
     try:
         treefile = str(context.treefile_path)
         tree_content = context.tree_newick_text or ""
@@ -180,9 +188,13 @@ def open_iqtree_result_window(context):
         ret = None
         while True:
             event, _ = win_res.read(timeout=250)
+            try:
+                _sync_tree_output(win_res)
+            except Exception:
+                if event not in ("Close", eg.WINDOW_CLOSED):
+                    raise
             if event in ("Close", eg.WINDOW_CLOSED):
                 break
-            _sync_tree_output(win_res)
             selection_action = _maybe_handle_tree_selection(win_res)
             if selection_action and selection_action.get("action") == "open_alignment":
                 context.set_original_input(selection_action["fasta_text"], selection_action["records"])
@@ -216,7 +228,18 @@ def open_iqtree_result_window(context):
                     continue
                 ret = "Back to IQTREE Options"
                 break
-        win_res.close()
         return ret
     except Exception as e:
+        if win_res is not None:
+            try:
+                win_res.close()
+            except Exception:
+                pass
+            win_res = None
         eg.popup("Failed to load output file:\n" + str(e))
+    finally:
+        if win_res is not None:
+            try:
+                win_res.close()
+            except Exception:
+                pass

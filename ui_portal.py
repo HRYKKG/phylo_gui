@@ -13,8 +13,8 @@ from ui_common import (
     reactivate_window,
     set_window_buttons_disabled,
 )
-from ui_alignment import open_alignment_options_window
 from ui_iqtree import open_iqtree_result_window
+from ui_pipeline import run_pipeline_windows
 
 
 def _sync_original_input(context, fasta_text):
@@ -62,7 +62,7 @@ def _open_tree_result_bypass(context, portal_fasta_text):
     context.leaf_label_map = build_leaf_label_map(context.original_records, tree_text)
     action = open_iqtree_result_window(context)
     if action == "Open in Alignment":
-        open_alignment_options_window(context)
+        run_pipeline_windows(context, "alignment")
 
 
 def open_portal_window(context=None):
@@ -110,7 +110,7 @@ def open_portal_window(context=None):
                 continue
             set_window_buttons_disabled(win, True)
             try:
-                open_alignment_options_window(context)
+                run_pipeline_windows(context, "alignment")
             finally:
                 set_window_buttons_disabled(win, False)
                 reactivate_window(win)

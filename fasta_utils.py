@@ -13,6 +13,9 @@ def _split_header(header_text: str):
 
 
 def parse_fasta_records(fasta_text: str):
+    if not fasta_text or not fasta_text.strip():
+        raise ValueError("FASTA input is empty.")
+
     records = []
     header = None
     seq_lines = []

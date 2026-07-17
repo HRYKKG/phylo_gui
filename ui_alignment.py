@@ -49,10 +49,7 @@ def open_alignment_options_window(context):
                 reactivate_window(opt_win)
                 continue
             opt_win.close()
-            from ui_trim import open_trim_options_window
-
-            open_trim_options_window(context)
-            return
+            return "trim"
         elif event == "Run Alignment":
             try:
                 threads = int(values["threads"].strip())
@@ -89,8 +86,6 @@ def open_alignment_options_window(context):
             else:
                 context.set_alignment_output(result[1])
                 opt_win.close()
-                from ui_trim import open_trim_options_window
-
-                open_trim_options_window(context)
-                return
+                return "trim"
     opt_win.close()
+    return None
