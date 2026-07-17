@@ -125,6 +125,7 @@ def open_trim_result_window(context, output_path, html_path):
             reactivate_window(res_win)
         elif event == "Show result":
             webbrowser.open("file://" + os.path.abspath(html_path))
+            reactivate_window(res_win)
         elif event == "Download":
             save_path = fd.asksaveasfilename(
                 defaultextension=".fasta",

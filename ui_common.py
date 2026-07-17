@@ -52,6 +52,7 @@ def install_inactive_button_indicator(window):
         return
 
     button_states = {}
+    is_inactive = False
 
     try:
         elements = list(window.key_elements.values())
@@ -61,6 +62,13 @@ def install_inactive_button_indicator(window):
     buttons = [element for element in elements if isinstance(element, eg.Button)]
 
     def set_active(_event=None):
+        nonlocal is_inactive
+        if not is_inactive:
+            return
+
+        # Mark the window active before updating widgets. Widget updates can
+        # themselves cause focus events, which must not replace the snapshot.
+        is_inactive = False
         for button in buttons:
             button_key = str(button.key)
             was_disabled = button_states.get(button_key)
@@ -70,8 +78,17 @@ def install_inactive_button_indicator(window):
                 button.update(disabled=was_disabled)
             except Exception:
                 continue
+        button_states.clear()
 
     def set_inactive(_event=None):
+        nonlocal is_inactive
+        # A single transition can emit multiple FocusOut events (for example,
+        # when a popup or external browser takes focus). Preserve the states
+        # captured by the first event instead of recording the temporary
+        # disabled=True values written below.
+        if is_inactive:
+            return
+        is_inactive = True
         for button in buttons:
             button_key = str(button.key)
             button_states[button_key] = getattr(button, "disabled", False)
