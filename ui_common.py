@@ -1,5 +1,8 @@
-import TkEasyGUI as eg
+import queue
+import threading
 from pathlib import Path
+
+import TkEasyGUI as eg
 
 
 def discard_pending_events(window, max_reads=3):
@@ -242,30 +245,60 @@ def run_with_progress(initial_message, run_func, *args, parent_window=None, **kw
         except Exception:
             parent_hidden = False
     prog_win.refresh()
+    try:
+        # Do not allow the progress window to disappear while its worker still
+        # owns an external analysis process and the parent is hidden.
+        prog_win.window.protocol("WM_DELETE_WINDOW", lambda: None)
+    except Exception:
+        pass
 
-    result = run_func(*args, **kwargs)
+    completed = queue.Queue(maxsize=1)
 
-    if result[0]:
-        final_message = initial_message.replace("running", "completed") + "\nPress OK to continue."
-        prog_win["progress"].update(final_message)
-        prog_win["ok"].update(disabled=False)
-        while True:
-            event_prog, _ = prog_win.read()
-            if event_prog in (None, eg.WINDOW_CLOSED):
-                break
-            if event_prog and event_prog.lower() == "ok":
-                break
-        prog_win.close()
-    else:
-        prog_win.close()
-    if parent_hidden:
+    def run_in_worker():
         try:
-            parent_window.un_hide()
-            parent_window.refresh()
-        except Exception:
-            pass
-    _restore_grab(previous_grab)
-    return result
+            completed.put(("result", run_func(*args, **kwargs)))
+        except BaseException as exc:
+            completed.put(("error", exc))
+
+    worker = threading.Thread(target=run_in_worker, daemon=True)
+    worker.start()
+    result = None
+    worker_error = None
+    try:
+        while result is None and worker_error is None:
+            prog_win.read(timeout=100)
+            try:
+                outcome, value = completed.get_nowait()
+            except queue.Empty:
+                continue
+            if outcome == "error":
+                worker_error = value
+            else:
+                result = value
+
+        if worker_error is not None:
+            raise worker_error
+
+        if result[0]:
+            final_message = initial_message.replace("running", "completed") + "\nPress OK to continue."
+            prog_win["progress"].update(final_message)
+            prog_win["ok"].update(disabled=False)
+            while True:
+                event_prog, _ = prog_win.read()
+                if event_prog in (None, eg.WINDOW_CLOSED):
+                    break
+                if event_prog and event_prog.lower() == "ok":
+                    break
+        return result
+    finally:
+        prog_win.close()
+        if parent_hidden:
+            try:
+                parent_window.un_hide()
+                parent_window.refresh()
+            except Exception:
+                pass
+        _restore_grab(previous_grab)
 
 
 def load_file(window_obj, key):

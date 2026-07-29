@@ -4,6 +4,7 @@ import tkinter.filedialog as fd
 
 import TkEasyGUI as eg
 
+from fasta_utils import parse_fasta_records
 from services_trim import get_trimal_version, run_trimal
 from ui_common import (
     discard_pending_events,
@@ -45,18 +46,18 @@ def open_trim_options_window(context):
             break
         elif event == "Back to Alignment":
             opt_win.close()
-            from ui_alignment import open_alignment_options_window
-
-            open_alignment_options_window(context)
-            return
+            return "alignment"
         elif event == "Skip to IQTREE":
             trim_input = values["trim_input"].strip()
+            try:
+                parse_fasta_records(trim_input)
+            except ValueError as exc:
+                eg.popup("FASTA input error:\n" + str(exc))
+                reactivate_window(opt_win)
+                continue
             context.set_trim_output(trim_input)
             opt_win.close()
-            from ui_iqtree import open_iqtree_options_window
-
-            open_iqtree_options_window(context)
-            return
+            return "iqtree"
         elif event == "Run Trim":
             mode = (
                 "automated1"
@@ -69,7 +70,13 @@ def open_trim_options_window(context):
                 if values.get("trim_mode_strictplus")
                 else "nogaps"
             )
-            trim_input = values["trim_input"]
+            trim_input = values["trim_input"].strip()
+            try:
+                parse_fasta_records(trim_input)
+            except ValueError as exc:
+                eg.popup("FASTA input error:\n" + str(exc))
+                reactivate_window(opt_win)
+                continue
             success, message, trimmed_result, output_path, html_path = run_trimal(trim_input, mode)
             if not success:
                 eg.popup("Error: trimal execution failed.\n" + message)
@@ -86,14 +93,12 @@ def open_trim_options_window(context):
             discard_pending_events(opt_win)
             if action == "Go to IQTREE":
                 opt_win.close()
-                from ui_iqtree import open_iqtree_options_window
-
-                open_iqtree_options_window(context)
-                return
+                return "iqtree"
             if action == "Close Stage":
                 opt_win.close()
-                return
+                return None
     opt_win.close()
+    return None
 
 
 def open_trim_result_window(context, output_path, html_path):

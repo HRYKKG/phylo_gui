@@ -219,6 +219,27 @@ def _write_viewer_html(payload, output_dir):
     return html_path
 
 
+def _write_json_atomic(path: Path, payload: dict):
+    """Replace a JSON file only after its complete contents are on disk."""
+    path.parent.mkdir(parents=True, exist_ok=True)
+    temp_path = None
+    try:
+        with tempfile.NamedTemporaryFile(
+            mode="w",
+            encoding="utf-8",
+            dir=path.parent,
+            prefix=path.name + ".",
+            suffix=".tmp",
+            delete=False,
+        ) as handle:
+            temp_path = Path(handle.name)
+            json.dump(payload, handle, ensure_ascii=False, indent=2)
+        temp_path.replace(path)
+    finally:
+        if temp_path is not None and temp_path.exists():
+            temp_path.unlink()
+
+
 def _default_output_dir():
     try:
         return Path(tempfile.mkdtemp(prefix="phylotree_viewer_"))
@@ -287,8 +308,7 @@ class _ViewerRequestHandler(BaseHTTPRequestHandler):
         content_length = int(self.headers.get("Content-Length", "0"))
         raw_body = self.rfile.read(content_length)
         payload = json.loads(raw_body.decode("utf-8"))
-        self._selection_output.parent.mkdir(parents=True, exist_ok=True)
-        self._selection_output.write_text(json.dumps(payload, ensure_ascii=False, indent=2), encoding="utf-8")
+        _write_json_atomic(self._selection_output, payload)
         self._send_text(
             json.dumps({"ok": True, "path": str(self._selection_output)}, ensure_ascii=False),
             "application/json; charset=utf-8",
